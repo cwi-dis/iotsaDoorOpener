@@ -4,8 +4,8 @@ Operates a solenoid to open a door. On web access, or when an RFID tag (such as 
 
 The RFID reader functionality and solenoid functionality are contained in individual iotsa extension modules and can be reused, independently of each other.
 
-
 Home page is <https://github.com/cwi-dis/iotsaDoorOpener>.
+This software is licensed under the [MIT license](LICENSE.txt) by the   CWI DIS group, <http://www.dis.cwi.nl>.
 
 ## Software requirements
 
