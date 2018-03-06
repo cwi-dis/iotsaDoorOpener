@@ -34,10 +34,10 @@ IotsaDoorMod::handler() {
 }
 
 bool IotsaDoorMod::postHandler(const char *path, const JsonVariant& request, JsonObject& reply) {
-  JsonVariant arg = request["open"];
   bool open = request["open"].as<bool>();
   if (open) {
     activateSolenoidUntil = millis() + solenoidActivationDuration;
+    return true;
   }
   return false;
 }

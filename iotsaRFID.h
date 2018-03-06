@@ -33,7 +33,7 @@ typedef void (*modeCallbackFunc)(cardMode mode);
 
 class IotsaRFIDMod : public IotsaApiMod {
 public:
-  IotsaRFIDMod(IotsaApplication &_app, IotsaAuthMod *_auth=NULL) : IotsaApiMod(_app, _auth) {}
+  IotsaRFIDMod(IotsaApplication &_app, IotsaAuthenticationProvider *_auth=NULL) : IotsaApiMod(_app, _auth) {}
   void setup();
   void serverSetup();
   void loop();
@@ -41,8 +41,6 @@ public:
   callbackFunc cardPresented;
   callbackFunc unknownCardPresented;
   modeCallbackFunc modeChanged;
-  using IotsaBaseMod::needsAuthentication;
-  bool needsAuthentication(const char *object, const char *verb) { if (auth==NULL) IotsaSerial.println("xxxjack IotsaBaseMod::needsAuthentication(2arg): no auth"); return auth ? auth->needsAuthentication(object, verb) : false; };
 protected:
   bool getHandler(const char *path, JsonObject& reply);
   bool putHandler(const char *path, const JsonVariant& request, JsonObject& reply);

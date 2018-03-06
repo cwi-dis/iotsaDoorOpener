@@ -17,14 +17,12 @@
 
 class IotsaDoorMod : public IotsaApiMod {
 public:
-  IotsaDoorMod(IotsaApplication &_app, IotsaAuthMod *_auth=NULL) : IotsaApiMod(_app, _auth) {}
+  IotsaDoorMod(IotsaApplication &_app, IotsaAuthenticationProvider *_auth=NULL) : IotsaApiMod(_app, _auth) {}
 	void setup();
 	void serverSetup();
 	void loop();
   String info();
   void openDoor();
-  using IotsaBaseMod::needsAuthentication;
-  bool needsAuthentication(const char *object, const char *verb) { if (auth==NULL) IotsaSerial.println("xxxjack IotsaBaseMod::needsAuthentication(2arg): no auth"); return auth ? auth->needsAuthentication(object, verb) : false; };
 private:
   bool postHandler(const char *path, const JsonVariant& request, JsonObject& reply);
   void handler();
