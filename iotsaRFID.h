@@ -3,6 +3,7 @@
 
 #include <ESP.h>
 #include "iotsa.h"
+#include "iotsaApi.h"
 
 //
 //  RFID module. Reads RFID cards.
@@ -30,9 +31,9 @@ typedef enum { card_idle, card_ok, card_bad, card_add, card_remove} cardMode;
 typedef void (*callbackFunc)(String& uid);
 typedef void (*modeCallbackFunc)(cardMode mode);
 
-class IotsaRFIDMod : public IotsaMod {
+class IotsaRFIDMod : public IotsaApiMod {
 public:
-  IotsaRFIDMod(IotsaApplication &_app, IotsaAuthMod *_auth=NULL) : IotsaMod(_app, _auth) {}
+  IotsaRFIDMod(IotsaApplication &_app, IotsaAuthMod *_auth=NULL) : IotsaApiMod(_app, _auth) {}
   void setup();
   void serverSetup();
   void loop();
@@ -40,6 +41,11 @@ public:
   callbackFunc cardPresented;
   callbackFunc unknownCardPresented;
   modeCallbackFunc modeChanged;
+  using IotsaBaseMod::needsAuthentication;
+  bool needsAuthentication(const char *object, const char *verb) { if (auth==NULL) IotsaSerial.println("xxxjack IotsaBaseMod::needsAuthentication(2arg): no auth"); return auth ? auth->needsAuthentication(object, verb) : false; };
+protected:
+  bool getHandler(const char *path, JsonObject& reply);
+  bool putHandler(const char *path, const JsonVariant& request, JsonObject& reply);
 private:
   void configSave();
   void configLoad();

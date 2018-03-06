@@ -33,14 +33,25 @@ IotsaDoorMod::handler() {
   server.send(200, "text/html", message);
 }
 
+bool IotsaDoorMod::postHandler(const char *path, const JsonVariant& request, JsonObject& reply) {
+  JsonVariant arg = request["open"];
+  bool open = request["open"].as<bool>();
+  if (open) {
+    activateSolenoidUntil = millis() + solenoidActivationDuration;
+  }
+  return false;
+}
+
+
 void IotsaDoorMod::serverSetup() {
   // Setup the web server hooks for this module.
   server.on("/door", std::bind(&IotsaDoorMod::handler, this));
+  api.setup("/api/door", false, false, true);
 }
 
 String IotsaDoorMod::info() {
   // Return some information about this module, for the main page of the web server.
-  String rv = "<p>See <a href=\"/door\">/door</a> for opening the door.</p>";
+  String rv = "<p>See <a href=\"/door\">/door</a> for opening the door. REST API available at <a href=\"/api/door\">/api/door</a>.</p>";
   return rv;
 }
 

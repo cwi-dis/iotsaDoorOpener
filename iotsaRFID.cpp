@@ -143,14 +143,54 @@ IotsaRFIDMod::handler() {
   server.send(200, "text/html", message);
 }
 
+bool IotsaRFIDMod::getHandler(const char *path, JsonObject& reply) {
+  reply["addCard"] = addCard;
+  reply["removeCard"] = removeCard;
+  reply["lastCard"] = lastCard;
+  if (lastCard != "") {
+    reply["lastCardPresented"] = (millis()-lastCardReadTime)/1000;
+  }
+  JsonArray& rCards =reply.createNestedArray("cards");
+  for (auto value : normalCards) {
+    rCards.add(value);
+  }
+  return true;
+}
+
+bool IotsaRFIDMod::putHandler(const char *path, const JsonVariant& request, JsonObject& reply) {
+  if (!request.is<JsonObject>()) return false;
+  JsonObject& reqObj = request.as<JsonObject>();
+  bool any = false;
+  if (reqObj.containsKey("addCard")) {
+    any = true;
+    addCard = reqObj.get<String>("addCard");
+  }
+  if (reqObj.containsKey("removeCard")) {
+    any = true;
+    removeCard = reqObj.get<String>("removeCard");
+  }
+  if (reqObj.containsKey("cards")) {
+    any = true;
+    normalCards.clear();
+    JsonArray& newCards = reqObj.get<JsonArray>("cards");
+    for (auto value: newCards) {
+      normalCards.insert(value.as<String>());
+    }
+  }
+  if (any) configSave();
+
+  return any;
+}
+
 void IotsaRFIDMod::serverSetup() {
   // Setup the web server hooks for this module.
   server.on("/rfid", std::bind(&IotsaRFIDMod::handler, this));
+  api.setup("/api/rfid", true, true);
 }
 
 String IotsaRFIDMod::info() {
   // Return some information about this module, for the main page of the web server.
-  String rv = "<p>See <a href=\"/rfid\">/rfid</a> for rfid stuff.</p>";
+  String rv = "<p>See <a href=\"/rfid\">/rfid</a> for rfid management. Api available at <a href=\"/api/rfid\">/api/rfid</a>.</p>";
   return rv;
 }
 
