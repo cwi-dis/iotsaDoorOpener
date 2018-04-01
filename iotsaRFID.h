@@ -1,7 +1,6 @@
 #ifndef _IOTSA_RFID_H_
 #define _IOTSA_RFID_H_
 
-#include <ESP.h>
 #include "iotsa.h"
 #include "iotsaApi.h"
 

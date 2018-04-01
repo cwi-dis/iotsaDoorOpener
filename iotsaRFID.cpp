@@ -1,4 +1,3 @@
-#include <ESP.h>
 #include "iotsa.h"
 #include "iotsaRFID.h"
 #include "iotsaConfigFile.h"

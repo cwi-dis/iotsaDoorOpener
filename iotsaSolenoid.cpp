@@ -1,4 +1,3 @@
-#include <ESP.h>
 #include "iotsa.h"
 #include "iotsaSolenoid.h"
 
