@@ -186,6 +186,7 @@ void IotsaRFIDMod::serverSetup() {
   // Setup the web server hooks for this module.
   server.on("/rfid", std::bind(&IotsaRFIDMod::handler, this));
   api.setup("/api/rfid", true, true);
+  name = "rfid";
 }
 
 String IotsaRFIDMod::info() {

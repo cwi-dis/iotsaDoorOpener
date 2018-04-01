@@ -7,7 +7,6 @@
 //
 //
 
-#include <ESP.h>
 #include "iotsa.h"
 #include "iotsaWifi.h"
 #include "iotsaRFID.h"

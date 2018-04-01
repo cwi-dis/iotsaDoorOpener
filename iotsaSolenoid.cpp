@@ -47,6 +47,7 @@ void IotsaDoorMod::serverSetup() {
   // Setup the web server hooks for this module.
   server.on("/door", std::bind(&IotsaDoorMod::handler, this));
   api.setup("/api/door", false, false, true);
+  name = "door";
 }
 
 String IotsaDoorMod::info() {

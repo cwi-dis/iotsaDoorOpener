@@ -1,55 +1,16 @@
-# Continuous Integration (CI) is the practice, in software
-# engineering, of merging all developer working copies with a shared mainline
-# several times a day < http://docs.platformio.org/page/ci/index.html >
-#
-# Documentation:
-#
-# * Travis CI Embedded Builds with PlatformIO
-#   < https://docs.travis-ci.com/user/integration/platformio/ >
-#
-# * PlatformIO integration with Travis CI
-#   < http://docs.platformio.org/page/ci/travis.html >
-#
-# * User Guide for `platformio ci` command
-#   < http://docs.platformio.org/page/userguide/cmd_ci.html >
-#
-#
-# Please choice one of the following templates (proposed below) and uncomment
-# it (remove "# " before each line) or use own configuration according to the
-# Travis CI documentation (see above).
-#
-
-
-#
-# Template #1: General project. Test it using existing `platformio.ini`.
-#
-
-# language: python
-# python:
-#     - "2.7"
-#
-# install:
-#     - pip install -U platformio
-#
-# script:
-#     - platformio run
-
-
-#
-# Template #2: The project is intended to by used as a library with examples
-#
-
-# language: python
-# python:
-#     - "2.7"
-#
-# env:
-#     - PLATFORMIO_CI_SRC=path/to/test/file.c
-#     - PLATFORMIO_CI_SRC=examples/file.ino
-#     - PLATFORMIO_CI_SRC=path/to/test/directory
-#
-# install:
-#     - pip install -U platformio
-#
-# script:
-#     - platformio ci --lib="." --board=ID_1 --board=ID_2 --board=ID_N
+language: python
+python:
+- '2.7'
+install:
+- pip install -U platformio
+script:
+- platformio run
+deploy:
+  provider: releases
+  api_key:
+    secure: 0eN/NpCbUkQ5rzo5Tq+Y+b5g6G0qPuuNSJSxQVW9s8wfUYZgnT5+SaZBOMQsii2fJ+lf32l53K3PAhL59tSaLAsHwBSiN2hB5cttUAZhQOPg/cWsLeu+muJMdVwtXNSRBguCQ6O4C4mDoceXNxkWzUVJsXNYdadXtz+DMFzOUNOhTE72OM/xqB0lHFpMbl7OqvjGQPF2Ga5om2B9NAyePLPLEqTbyCWRHBipDp34lpPE/8/63+M6Mbxw2/2qIAS9mXiCFQLKTihv8oNLESZScVyQjMWg7pFunMoJ2RpYEI10PokQZXOcDsLQRfjf7GcgtLa/Xodcvvf9LtRU5I6xMwaBW54Ys8030xLXjKT+hgkKdgXxN/Map8Hhah6FSta/YQ0fPJuYSJFF5TjwxCHuooyxZZ3kDpUW1PTD466xlcslQZsfuJJcumLh9oonmKv3s/163LiUkDfJrEUb953EtiZ4GP5/N54X4z8hAVG1T4tOgnEwLkcDVgqz5jNdKfUcUDXnz2g9loW0gpp8Qyt4Jsf8gNmO+NEune0ldNaT96Slts1/FKRuvmGehCXpiSQ9GLDv/di4qfskU+ssgvlz76zUdXiXBfvphjPjXa5Ng8sP4m6Dhg420wI66RYXIo6Gl77cv3pu+N32v8+8JRBkvw6ZNaKQ4jzQ761byXvq74w=
+  file: ".pioenvs/nodemcuv2/firmware.bin"
+  on:
+    repo: cwi-dis/iotsaDoorOpener
+    tags: true
+    all_branches: true
