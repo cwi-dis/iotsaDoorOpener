@@ -21,8 +21,7 @@
 #define WITH_OTA    // Enable Over The Air updates from ArduinoIDE. Needs at least 1MB flash.
 #define NEO_PIN 15  // Pin where neopixel led is attached
 
-ESP8266WebServer server(80);
-IotsaApplication application(server, "Door Opening Server");
+IotsaApplication application("Door Opening Server");
 IotsaUserMod myAuthenticator(application, "admin");
 
 IotsaWifiMod wifiMod(application, &myAuthenticator);
