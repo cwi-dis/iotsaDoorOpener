@@ -84,32 +84,32 @@ IotsaRFIDMod::handler() {
   // Handles the page that is specific to the RFID module.
   if (needsAuthentication()) return;
   bool anyChanged = false;
-  for (uint8_t i=0; i<server.args(); i++){
-    if( server.argName(i) == "addCard") {
-        if( server.arg(i) != addCard) {
+  for (uint8_t i=0; i<server->args(); i++){
+    if( server->argName(i) == "addCard") {
+        if( server->arg(i) != addCard) {
           anyChanged = true;
-          addCard = server.arg(i);
+          addCard = server->arg(i);
           IotsaSerial.print("Set addCard: ");
           IotsaSerial.println(addCard);
         }
     }
-    if( server.argName(i) == "removeCard") {
-        if( server.arg(i) != removeCard) {
+    if( server->argName(i) == "removeCard") {
+        if( server->arg(i) != removeCard) {
           anyChanged = true;
-          removeCard = server.arg(i);
+          removeCard = server->arg(i);
           IotsaSerial.print("Set removeCard: ");
           IotsaSerial.println(removeCard);
         }
     }
-    if( server.argName(i) == "normalAdd") {
-        String val = server.arg(i);
+    if( server->argName(i) == "normalAdd") {
+        String val = server->arg(i);
         if( val != "") {
           anyChanged = true;
           handleAddCard(val);
         }
     }
-    if( server.argName(i) == "normalRemove") {
-        String val = server.arg(i);
+    if( server->argName(i) == "normalRemove") {
+        String val = server->arg(i);
         if( val != "") {
           anyChanged = true;
           handleRemoveCard(val);
@@ -139,7 +139,7 @@ IotsaRFIDMod::handler() {
   message += "</ul>";
   
   message += "</body></html>";
-  server.send(200, "text/html", message);
+  server->send(200, "text/html", message);
 }
 
 bool IotsaRFIDMod::getHandler(const char *path, JsonObject& reply) {
@@ -183,7 +183,7 @@ bool IotsaRFIDMod::putHandler(const char *path, const JsonVariant& request, Json
 
 void IotsaRFIDMod::serverSetup() {
   // Setup the web server hooks for this module.
-  server.on("/rfid", std::bind(&IotsaRFIDMod::handler, this));
+  server->on("/rfid", std::bind(&IotsaRFIDMod::handler, this));
   api.setup("/api/rfid", true, true);
   name = "rfid";
 }
