@@ -149,7 +149,7 @@ bool IotsaRFIDMod::getHandler(const char *path, JsonObject& reply) {
   if (lastCard != "") {
     reply["lastCardPresented"] = (millis()-lastCardReadTime)/1000;
   }
-  JsonArray& rCards =reply.createNestedArray("cards");
+  JsonArray rCards =reply.createNestedArray("cards");
   for (auto value : normalCards) {
     rCards.add(value);
   }
@@ -158,20 +158,20 @@ bool IotsaRFIDMod::getHandler(const char *path, JsonObject& reply) {
 
 bool IotsaRFIDMod::putHandler(const char *path, const JsonVariant& request, JsonObject& reply) {
   if (!request.is<JsonObject>()) return false;
-  JsonObject& reqObj = request.as<JsonObject>();
+  JsonObject reqObj = request.as<JsonObject>();
   bool any = false;
   if (reqObj.containsKey("addCard")) {
     any = true;
-    addCard = reqObj.get<String>("addCard");
+    addCard = reqObj["addCard"].as<String>();
   }
   if (reqObj.containsKey("removeCard")) {
     any = true;
-    removeCard = reqObj.get<String>("removeCard");
+    removeCard = reqObj["removeCard"].as<String>();
   }
   if (reqObj.containsKey("cards")) {
     any = true;
     normalCards.clear();
-    JsonArray& newCards = reqObj.get<JsonArray>("cards");
+    JsonArray newCards = reqObj["cards"];
     for (auto value: newCards) {
       normalCards.insert(value.as<String>());
     }
