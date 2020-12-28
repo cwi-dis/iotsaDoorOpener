@@ -268,6 +268,7 @@ void IotsaRFIDMod::configLoad() {
   cf.get("addCard", addCard, "");
   cf.get("removeCard", removeCard, "");
   int idx=1;
+  // xxxjack should use object interface
   normalCards.clear();
   while(1) {
     String newCard;
