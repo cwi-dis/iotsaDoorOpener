@@ -21,7 +21,6 @@
 #define WITH_OTA    // Enable Over The Air updates from ArduinoIDE. Needs at least 1MB flash.
 #define NEO_PIN 15  // Pin where neopixel led is attached
 
-ESP8266WebServer server(80);
 IotsaApplication application("Door Opening Server");
 IotsaUserMod myAuthenticator(application, "admin");
 
@@ -63,7 +62,9 @@ void showMode(cardMode mode) {
 void setup(void){
   application.setup();
   application.serverSetup();
+#ifndef ESP32
   ESP.wdtEnable(WDTO_120MS);
+#endif
   rfidMod.cardPresented = openDoor;
   rfidMod.modeChanged = showMode;
   showMode(card_idle);
