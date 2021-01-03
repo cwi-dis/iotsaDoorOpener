@@ -17,13 +17,13 @@
 class IotsaDoorMod : public IotsaApiMod {
 public:
   IotsaDoorMod(IotsaApplication &_app, IotsaAuthenticationProvider *_auth=NULL) : IotsaApiMod(_app, _auth) {}
-	void setup();
-	void serverSetup();
-	void loop();
-  String info();
+  void setup() override;
+  void serverSetup() override;
+  void loop() override;
+  String info() override;
   void openDoor();
 private:
-  bool postHandler(const char *path, const JsonVariant& request, JsonObject& reply);
+  bool postHandler(const char *path, const JsonVariant& request, JsonObject& reply) override;
   void handler();
 };
 #endif // _IOTSA_SOLENIOD_H_

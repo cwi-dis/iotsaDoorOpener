@@ -33,19 +33,19 @@ typedef void (*modeCallbackFunc)(cardMode mode);
 class IotsaRFIDMod : public IotsaApiMod {
 public:
   IotsaRFIDMod(IotsaApplication &_app, IotsaAuthenticationProvider *_auth=NULL) : IotsaApiMod(_app, _auth) {}
-  void setup();
-  void serverSetup();
-  void loop();
-  String info();
+  void setup() override;
+  void serverSetup() override;
+  void loop() override;
+  String info() override;
   callbackFunc cardPresented;
   callbackFunc unknownCardPresented;
   modeCallbackFunc modeChanged;
 protected:
-  bool getHandler(const char *path, JsonObject& reply);
-  bool putHandler(const char *path, const JsonVariant& request, JsonObject& reply);
+  bool getHandler(const char *path, JsonObject& reply) override;
+  bool putHandler(const char *path, const JsonVariant& request, JsonObject& reply) override;
 private:
-  void configSave();
-  void configLoad();
+  void configSave() override;
+  void configLoad() override;
   void handler();
   void handleCard(String& uid);
 };
