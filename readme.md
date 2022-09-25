@@ -1,5 +1,8 @@
 # iotsaDoorOpener - open a door with RFID or a web browser
 
+![build-platformio](https://github.com/cwi-dis/iotsaDoorOpener/workflows/build-platformio/badge.svg)
+![build-arduino](https://github.com/cwi-dis/iotsaDoorOpener/workflows/build-arduino/badge.svg)
+
 Operates a solenoid to open a door. On web access, or when an RFID tag (such as a keychain fob or a mifare contactless transport card) is presented. RFID cards are programmable (over the net, or using a special "learn" card). A web request can be sent to a programmable URL when a card is presented.
 
 The RFID reader functionality and solenoid functionality are contained in individual iotsa extension modules and can be reused, independently of each other.
