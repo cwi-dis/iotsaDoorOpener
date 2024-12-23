@@ -32,20 +32,6 @@ static String strUid(MFRC522::Uid& uid) {
   return rv;
 }
 
-// Helper function: compare RFID UID to string
-
-static bool cmpUid(MFRC522::Uid& uid, String& wanted) {
-  if (uid.size*2 != wanted.length()) return false;
-  
-  for (int i=0; i<uid.size; i++) {
-    char c = '0' + ((uid.uidByte[i] >> 4) & 0xf);
-    if (c != wanted[2*i]) return false;
-    c = '0' + (uid.uidByte[i] & 0xf);
-    if (c != wanted[2*i+1]) return false;
-  }
-  return true;
-}
-
 bool lookupCard(String& uid) {
   auto it = normalCards.find(uid);
   bool ok = it != normalCards.end();
@@ -149,7 +135,7 @@ bool IotsaRFIDMod::getHandler(const char *path, JsonObject& reply) {
   if (lastCard != "") {
     reply["lastCardPresented"] = (millis()-lastCardReadTime)/1000;
   }
-  JsonArray rCards = reply.createNestedArray("cards");
+  JsonArray rCards = reply["cards"].as<JsonArray>();
   for (auto value : normalCards) {
     rCards.add(value);
   }
@@ -160,18 +146,16 @@ bool IotsaRFIDMod::putHandler(const char *path, const JsonVariant& request, Json
   if (!request.is<JsonObject>()) return false;
   JsonObject reqObj = request.as<JsonObject>();
   bool any = false;
-  if (reqObj.containsKey("addCard")) {
+  if (getFromRequest<const char *>(reqObj, "addCard", addCard)) {
     any = true;
-    addCard = reqObj["addCard"].as<String>();
   }
-  if (reqObj.containsKey("removeCard")) {
+  if (getFromRequest<const char *>(reqObj, "removeCard", removeCard)) {
     any = true;
-    removeCard = reqObj["removeCard"].as<String>();
   }
-  if (reqObj.containsKey("cards")) {
+  JsonArray newCards;
+  if (getFromRequest<JsonArray>(reqObj, "cards", newCards)) {
     any = true;
     normalCards.clear();
-    JsonArray newCards = reqObj["cards"];
     for (auto value: newCards) {
       normalCards.insert(value.as<String>());
     }
