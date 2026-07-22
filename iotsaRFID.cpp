@@ -1,23 +1,6 @@
 #include "iotsa.h"
 #include "iotsaRFID.h"
 #include "iotsaConfigFile.h"
-#include "MFRC522.h"
-#include <set>
-
-String addCard;
-String removeCard;
-String lastCard;
-uint32_t lastCardReadTime;
-bool lastCardKnown;
-std::set<String> normalCards;
-
-
-cardMode curMode;
-uint32_t curModeEndTime;
-
-// RFID reader interface object
-
-MFRC522 mfrc522(PIN_RFID_SDA, PIN_RFID_RESET);
 
 // Helper function: convert RFID UID to string
 
@@ -32,13 +15,13 @@ static String strUid(MFRC522::Uid& uid) {
   return rv;
 }
 
-bool lookupCard(String& uid) {
+bool IotsaRFIDMod::lookupCard(const String& uid) {
   auto it = normalCards.find(uid);
   bool ok = it != normalCards.end();
   return ok;
 }
 
-void handleAddCard(String& uid) {
+void IotsaRFIDMod::handleAddCard(const String& uid) {
   auto it = normalCards.find(uid);
   if (it == normalCards.end()) {
     normalCards.insert(uid);
@@ -47,7 +30,7 @@ void handleAddCard(String& uid) {
   }
 }
 
-void handleRemoveCard(String& uid) {
+void IotsaRFIDMod::handleRemoveCard(const String& uid) {
   auto it = normalCards.find(uid);
   if (it != normalCards.end()) {
     normalCards.erase(it);
@@ -70,39 +53,28 @@ IotsaRFIDMod::handler() {
   // Handles the page that is specific to the RFID module.
   if (needsAuthentication()) return;
   bool anyChanged = false;
-  for (uint8_t i=0; i<server->args(); i++){
-    if( server->argName(i) == "addCard") {
-        if( server->arg(i) != addCard) {
-          anyChanged = true;
-          addCard = server->arg(i);
-          IotsaSerial.print("Set addCard: ");
-          IotsaSerial.println(addCard);
-        }
-    }
-    if( server->argName(i) == "removeCard") {
-        if( server->arg(i) != removeCard) {
-          anyChanged = true;
-          removeCard = server->arg(i);
-          IotsaSerial.print("Set removeCard: ");
-          IotsaSerial.println(removeCard);
-        }
-    }
-    if( server->argName(i) == "normalAdd") {
-        String val = server->arg(i);
-        if( val != "") {
-          anyChanged = true;
-          handleAddCard(val);
-        }
-    }
-    if( server->argName(i) == "normalRemove") {
-        String val = server->arg(i);
-        if( val != "") {
-          anyChanged = true;
-          handleRemoveCard(val);
-        }
-    }
-    if (anyChanged) configSave();
+  if (server->hasArg("addCard") && server->arg("addCard") != addCard) {
+    anyChanged = true;
+    addCard = server->arg("addCard");
+    IotsaSerial.print("Set addCard: ");
+    IotsaSerial.println(addCard);
   }
+  if (server->hasArg("removeCard") && server->arg("removeCard") != removeCard) {
+    anyChanged = true;
+    removeCard = server->arg("removeCard");
+    IotsaSerial.print("Set removeCard: ");
+    IotsaSerial.println(removeCard);
+  }
+  if (server->hasArg("normalAdd") && server->arg("normalAdd") != "") {
+    anyChanged = true;
+    handleAddCard(server->arg("normalAdd"));
+  }
+  if (server->hasArg("normalRemove") && server->arg("normalRemove") != "") {
+    anyChanged = true;
+    handleRemoveCard(server->arg("normalRemove"));
+  }
+  if (anyChanged) configSave();
+
   String message = "<html><head><title>RFID Server</title></head><body><h1>RFID Server</h1>";
   if (lastCard != "") {
     message += "<p>Last card was presented " + String((millis()-lastCardReadTime)/1000) + " seconds ago, Card ID " + lastCard;

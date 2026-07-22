@@ -41,7 +41,7 @@ If you want to mount in two cases: a 3D-printable model for the RFID enclosure c
 
 ## Building the software
 
-If you have not changed anything in the design there is nothgin to configure. If you have used different GPIO pins look at the _iotsaDoorOpener_ main program and the _iotsaRFID.h_ and _iotsaSolenoid.h_ include files.
+If you have not changed anything in the design there is nothing to configure. If you have used different GPIO pins look at the _iotsaDoorOpener_ main program and the _iotsaRFID.h_ and _iotsaDoor.h_ include files.
 
 Compile, and flash either using an FTDI or over-the-air.
 

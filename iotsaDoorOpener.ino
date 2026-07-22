@@ -1,10 +1,6 @@
 //
-// Boilerplate for configurable web server (probably RESTful) running on ESP8266.
-//
-// This server includes the wifi configuration module, and optionally the
-// Over-The-Air update module (to allow uploading new code into the esp12 (or other
-// board) from the Arduino IDE.
-//
+// Opens a door with a solenoid, triggered by an RFID card/tag or a web/REST request.
+// See readme.md for hardware and operation details.
 //
 
 #include "iotsa.h"
@@ -13,10 +9,8 @@
 #include "iotsaFilesBackup.h"
 #include "iotsaOta.h"
 #include "iotsaLed.h"
-#include "iotsaSolenoid.h"
+#include "iotsaDoor.h"
 #include "iotsaUser.h"
-
-// CHANGE: Add application includes and declarations here
 
 #define WITH_OTA    // Enable Over The Air updates from ArduinoIDE. Needs at least 1MB flash.
 #define NEO_PIN 15  // Pin where neopixel led is attached

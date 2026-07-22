@@ -3,6 +3,8 @@
 
 #include "iotsa.h"
 #include "iotsaApi.h"
+#include "MFRC522.h"
+#include <set>
 
 //
 //  RFID module. Reads RFID cards.
@@ -32,7 +34,14 @@ typedef void (*modeCallbackFunc)(cardMode mode);
 
 class IotsaRFIDMod : public IotsaApiMod {
 public:
-  IotsaRFIDMod(IotsaApplication &_app, IotsaAuthenticationProvider *_auth=NULL) : IotsaApiMod(_app, _auth) {}
+  IotsaRFIDMod(IotsaApplication &_app, IotsaAuthenticationProvider *_auth=NULL)
+  : IotsaApiMod(_app, _auth),
+    mfrc522(PIN_RFID_SDA, PIN_RFID_RESET),
+    lastCardReadTime(0),
+    lastCardKnown(false),
+    curMode(card_idle),
+    curModeEndTime(0)
+  {}
   void setup() override;
   void serverSetup() override;
   void loop() override;
@@ -48,6 +57,19 @@ private:
   void configLoad() override;
   void handler();
   void handleCard(String& uid);
+  bool lookupCard(const String& uid);
+  void handleAddCard(const String& uid);
+  void handleRemoveCard(const String& uid);
+
+  MFRC522 mfrc522;
+  String addCard;
+  String removeCard;
+  String lastCard;
+  uint32_t lastCardReadTime;
+  bool lastCardKnown;
+  std::set<String> normalCards;
+  cardMode curMode;
+  uint32_t curModeEndTime;
 };
 
 

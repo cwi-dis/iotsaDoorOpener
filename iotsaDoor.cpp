@@ -1,8 +1,5 @@
 #include "iotsa.h"
-#include "iotsaSolenoid.h"
-
-uint32_t activateSolenoidUntil;
-uint32_t solenoidActivationDuration = 2000;
+#include "iotsaDoor.h"
 
 // Implementation of the Door module
 void IotsaDoorMod::setup() {
@@ -18,13 +15,11 @@ IotsaDoorMod::handler() {
   if (needsAuthentication()) {
     return;
   }
-  for (uint8_t i=0; i<server->args(); i++){
-    if( server->argName(i) == "open") {
-      if (server->arg(i).toInt() > 0) {
-        activateSolenoidUntil = millis() + solenoidActivationDuration;
-      } else {
-        activateSolenoidUntil = 0;
-      }
+  if (server->hasArg("open")) {
+    if (server->arg("open").toInt() > 0) {
+      activateSolenoidUntil = millis() + solenoidActivationDuration;
+    } else {
+      activateSolenoidUntil = 0;
     }
   }
   String message = "<html><head><title>Door Server</title></head><body><h1>Door Server</h1>";
