@@ -2,7 +2,6 @@
 #define _IOTSA_DOOR_H_
 
 #include "iotsa.h"
-#include "iotsaApi.h"
 
 //
 //  Pin for door module. Opens door with a solenoid.
@@ -11,13 +10,17 @@
 #define PIN_SOLENOID 4
 
 //
-//  Door module. Opens door with a solenoid.
+//  Door module. Opens door with a solenoid. No REST API: there is no
+//  persistent config to expose (opening the door is a momentary trigger,
+//  not a config change), so this stays a plain web endpoint only --
+//  matches the REST-is-config-only convention used across the framework
+//  (e.g. iotsaSmartMeter's IotsaP1Mod).
 //
 
-class IotsaDoorMod : public IotsaApiMod {
+class IotsaDoorMod : public IotsaMod {
 public:
   IotsaDoorMod(IotsaApplication &_app, IotsaAuthenticationProvider *_auth=NULL)
-  : IotsaApiMod(_app, _auth),
+  : IotsaMod(_app, _auth),
     activateSolenoidUntil(0),
     solenoidActivationDuration(2000)
   {}
@@ -27,7 +30,6 @@ public:
   String info() override;
   void openDoor();
 private:
-  bool postHandler(const char *path, const JsonVariant& request, JsonObject& reply) override;
   void handler();
   uint32_t activateSolenoidUntil;
   uint32_t solenoidActivationDuration;

@@ -75,29 +75,37 @@ IotsaRFIDMod::handler() {
   }
   if (anyChanged) configSave();
 
-  String message = "<html><head><title>RFID Server</title></head><body><h1>RFID Server</h1>";
+  // Stream the response instead of building one big in-core String: with enough
+  // known cards (~30-40) that String overflowed available RAM and crashed the
+  // device (cwi-dis/iotsaDoorOpener#1). Each sendContent() call only ever holds
+  // one card's worth of HTML at a time, so this is bounded regardless of how
+  // many cards are known.
+#ifdef CONTENT_LENGTH_UNKNOWN
+  server->setContentLength(CONTENT_LENGTH_UNKNOWN);
+#endif
+  server->send(200, "text/html");
+  server->sendContent("<html><head><title>RFID Server</title></head><body><h1>RFID Server</h1>");
   if (lastCard != "") {
-    message += "<p>Last card was presented " + String((millis()-lastCardReadTime)/1000) + " seconds ago, Card ID " + lastCard;
+    String message = "<p>Last card was presented " + String((millis()-lastCardReadTime)/1000) + " seconds ago, Card ID " + lastCard;
     if (!lastCardKnown) message += " (unknown)";
     message += ".</p>";
+    server->sendContent(message);
   } else {
-    message += "<p>No card presented since last power-on.</p>";
+    server->sendContent("<p>No card presented since last power-on.</p>");
   }
 
-  message += "<h2>Adding Cards</h2><form method='get'>Master addition card ID: <input name='addCard' value='";
-  message += addCard;
-  message += "'><br>Master removal card ID: <input name='removeCard' value='";
-  message += removeCard;
-  message += "'><br>Manually add normal card: <input name='normalAdd'><br><input type='submit'></form>";
+  String form = "<h2>Adding Cards</h2><form method='get'>Master addition card ID: <input name='addCard' value='";
+  form += addCard;
+  form += "'><br>Master removal card ID: <input name='removeCard' value='";
+  form += removeCard;
+  form += "'><br>Manually add normal card: <input name='normalAdd'><br><input type='submit'></form>";
+  server->sendContent(form);
 
-  message += "<h2>Known Cards</h2><ul>";
+  server->sendContent("<h2>Known Cards</h2><ul>");
   for (auto it=normalCards.begin(); it != normalCards.end(); it++) {
-    message += "<li>" + *it + "(<a href='/rfid?normalRemove=" + *it + "'>remove</a>)</li>";
+    server->sendContent("<li>" + *it + "(<a href='/rfid?normalRemove=" + *it + "'>remove</a>)</li>");
   }
-  message += "</ul>";
-  
-  message += "</body></html>";
-  server->send(200, "text/html", message);
+  server->sendContent("</ul></body></html>");
 }
 
 bool IotsaRFIDMod::getHandler(const char *path, JsonObject& reply) {
