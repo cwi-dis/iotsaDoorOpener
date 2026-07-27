@@ -46,8 +46,17 @@ void IotsaRFIDMod::setup() {
   SPI.begin();
   mfrc522.PCD_Init();
   chipVersion = mfrc522.PCD_ReadRegister(MFRC522::VersionReg);
-  IotsaSerial.print("RFID: MFRC522 VersionReg=0x");
-  IotsaSerial.println(chipVersion, HEX);
+  // 0x00 and 0xFF are not valid MFRC522 firmware versions - both are what a floating/dead
+  // SPI bus reads back, i.e. no chip actually answering (unplugged, unpowered, miswired).
+  chipPresent = (chipVersion != 0x00 && chipVersion != 0xFF);
+  if (chipPresent) {
+    IotsaSerial.print("RFID: MFRC522 VersionReg=0x");
+    IotsaSerial.println(chipVersion, HEX);
+  } else {
+    IotsaSerial.print("RFID: MFRC522 not detected (VersionReg=0x");
+    IotsaSerial.print(chipVersion, HEX);
+    IotsaSerial.println("), check reader wiring/power");
+  }
   configLoad();
 }
 
@@ -127,7 +136,12 @@ bool IotsaRFIDMod::getHandler(const char *path, JsonObject& reply) {
   // General RFID telemetry, for remote debugging of read failures (cwi-dis/iotsaDoorOpener#4)
   JsonObject telemetry = reply["telemetry"].to<JsonObject>();
   telemetry["chipVersion"] = chipVersion;
-  telemetry["antennaGain"] = mfrc522.PCD_GetAntennaGain();
+  telemetry["chipPresent"] = chipPresent;
+  if (chipPresent) {
+    // Only meaningful when a real chip is answering: on a disconnected/dead bus every
+    // register reads back 0xFF, which masks to a plausible-looking but bogus 0x70.
+    telemetry["antennaGain"] = mfrc522.PCD_GetAntennaGain();
+  }
   if (everAttemptedRead) {
     telemetry["lastAttemptAgo"] = (millis()-lastAttemptTime)/1000;
     telemetry["lastAttemptOk"] = lastAttemptOk;
@@ -177,10 +191,12 @@ String IotsaRFIDMod::info() {
 }
 
 void IotsaRFIDMod::loop() {
+  if (!chipPresent) return; // No point polling a chip that wasn't there at setup()
+
   static uint32_t lastPoll;
   uint32_t now = millis();
 
-  if (now > lastPoll && now < lastPoll + RFID_POLL_INTERVAL) 
+  if (now > lastPoll && now < lastPoll + RFID_POLL_INTERVAL)
     return;
   lastPoll = now;
   //IotsaSerial.println("rfid in");

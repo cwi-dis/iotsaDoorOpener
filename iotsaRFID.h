@@ -42,6 +42,7 @@ public:
     curMode(card_idle),
     curModeEndTime(0),
     chipVersion(0),
+    chipPresent(false),
     everAttemptedRead(false),
     lastAttemptTime(0),
     lastAttemptOk(false),
@@ -81,6 +82,7 @@ private:
 
   // Chip/read telemetry, exposed over /api/rfid for remote debugging (cwi-dis/iotsaDoorOpener#4)
   uint8_t chipVersion;
+  bool chipPresent; // false if VersionReg read as 0x00 or 0xFF at setup(): no chip answering on SPI
   bool everAttemptedRead;
   uint32_t lastAttemptTime;
   bool lastAttemptOk;
