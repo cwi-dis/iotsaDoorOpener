@@ -40,7 +40,14 @@ public:
     lastCardReadTime(0),
     lastCardKnown(false),
     curMode(card_idle),
-    curModeEndTime(0)
+    curModeEndTime(0),
+    chipVersion(0),
+    everAttemptedRead(false),
+    lastAttemptTime(0),
+    lastAttemptOk(false),
+    lastAttemptStatus(MFRC522::STATUS_OK),
+    lastAttemptErrorReg(0),
+    lastAttemptCollReg(0)
   {}
   void setup() override;
   void serverSetup() override;
@@ -65,11 +72,21 @@ private:
   String addCard;
   String removeCard;
   String lastCard;
+  String lastCardType;
   uint32_t lastCardReadTime;
   bool lastCardKnown;
   std::set<String> normalCards;
   cardMode curMode;
   uint32_t curModeEndTime;
+
+  // Chip/read telemetry, exposed over /api/rfid for remote debugging (cwi-dis/iotsaDoorOpener#4)
+  uint8_t chipVersion;
+  bool everAttemptedRead;
+  uint32_t lastAttemptTime;
+  bool lastAttemptOk;
+  MFRC522::StatusCode lastAttemptStatus;
+  uint8_t lastAttemptErrorReg;
+  uint8_t lastAttemptCollReg;
 };
 
 

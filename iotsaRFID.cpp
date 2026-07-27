@@ -45,6 +45,9 @@ void IotsaRFIDMod::handleRemoveCard(const String& uid) {
 void IotsaRFIDMod::setup() {
   SPI.begin();
   mfrc522.PCD_Init();
+  chipVersion = mfrc522.PCD_ReadRegister(MFRC522::VersionReg);
+  IotsaSerial.print("RFID: MFRC522 VersionReg=0x");
+  IotsaSerial.println(chipVersion, HEX);
   configLoad();
 }
 
@@ -114,10 +117,25 @@ bool IotsaRFIDMod::getHandler(const char *path, JsonObject& reply) {
   reply["lastCard"] = lastCard;
   if (lastCard != "") {
     reply["lastCardPresented"] = (millis()-lastCardReadTime)/1000;
+    reply["lastCardType"] = lastCardType;
   }
   JsonArray rCards = reply["cards"].as<JsonArray>();
   for (auto value : normalCards) {
     rCards.add(value);
+  }
+
+  // General RFID telemetry, for remote debugging of read failures (cwi-dis/iotsaDoorOpener#4)
+  JsonObject telemetry = reply["telemetry"].to<JsonObject>();
+  telemetry["chipVersion"] = chipVersion;
+  telemetry["antennaGain"] = mfrc522.PCD_GetAntennaGain();
+  if (everAttemptedRead) {
+    telemetry["lastAttemptAgo"] = (millis()-lastAttemptTime)/1000;
+    telemetry["lastAttemptOk"] = lastAttemptOk;
+    telemetry["lastAttemptStatus"] = String(MFRC522::GetStatusCodeName(lastAttemptStatus));
+    if (!lastAttemptOk) {
+      telemetry["lastAttemptErrorReg"] = lastAttemptErrorReg;
+      telemetry["lastAttemptCollReg"] = lastAttemptCollReg;
+    }
   }
   return true;
 }
@@ -174,18 +192,30 @@ void IotsaRFIDMod::loop() {
     if (modeChanged) modeChanged(curMode);
   }
   if (!mfrc522.PICC_IsNewCardPresent()) {
-    //IotsaSerial.println("rfid no card");
     return;
   }
-  IotsaSerial.println("card present");
-  if (!mfrc522.PICC_ReadCardSerial()) {
-    //IotsaSerial.println("rfid no serial");
+  // PICC_ReadCardSerial() is a thin wrapper around PICC_Select() that discards the
+  // StatusCode. Call PICC_Select() directly so a failed read (previously silent,
+  // cwi-dis/iotsaDoorOpener#4) can be logged and exposed over /api/rfid.
+  MFRC522::StatusCode selectStatus = mfrc522.PICC_Select(&mfrc522.uid);
+  everAttemptedRead = true;
+  lastAttemptTime = millis();
+  lastAttemptStatus = selectStatus;
+  lastAttemptOk = (selectStatus == MFRC522::STATUS_OK);
+  if (!lastAttemptOk) {
+    lastAttemptErrorReg = mfrc522.PCD_ReadRegister(MFRC522::ErrorReg);
+    lastAttemptCollReg = mfrc522.PCD_ReadRegister(MFRC522::CollReg);
+    IotsaSerial.print("RFID: card present but read failed: ");
+    IotsaSerial.println(MFRC522::GetStatusCodeName(selectStatus));
     return;
   }
-  IotsaSerial.println("serial read");
   String newCard = strUid(mfrc522.uid);
+  lastCardType = String(MFRC522::PICC_GetTypeName(MFRC522::PICC_GetType(mfrc522.uid.sak)));
+  IotsaSerial.print("RFID: card read ok, uid=");
+  IotsaSerial.print(newCard);
+  IotsaSerial.print(" type=");
+  IotsaSerial.println(lastCardType);
   handleCard(newCard);
-  //IotsaSerial.println("rfid out");
 }
 
 void IotsaRFIDMod::handleCard(String& newCard) {
