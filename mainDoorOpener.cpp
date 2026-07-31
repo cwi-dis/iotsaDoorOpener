@@ -34,19 +34,19 @@ void openDoor(String& uid) {
 void showMode(cardMode mode) {
   if (mode == card_ok) {
     ledMod.set(0x00ff00, 2000, 0, 1);  // 2 seconds green
-    IotsaSerial.println("2 seconds green");
+    IotsaSerial.println("showMode: card_ok");
   } else if (mode == card_bad) {
     ledMod.set(0xff0000, 2000, 0, 1);  // 2 seconds red
-    IotsaSerial.println("2 seconds red");
+    IotsaSerial.println("showMode: card_bad");
   } else if (mode == card_add) {
     ledMod.set(0x00ff00, 250, 250, 8);  // 2 seconds green flashing
-    IotsaSerial.println("2 seconds green flashing");
+    IotsaSerial.println("showMode: card_add");
   } else if (mode == card_remove) {
     ledMod.set(0xff0000, 250, 250, 8);  // 2 seconds red flashing
-    IotsaSerial.println("2 seconds red flashing");
+    IotsaSerial.println("showMode: card_remove");
   } else {
     ledMod.showStatus(); // Short flashes to show module status/mode
-    IotsaSerial.println("showing status");
+    IotsaSerial.println("showMode: iotsa status");
   }
 }
 

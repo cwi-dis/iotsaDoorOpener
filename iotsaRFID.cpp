@@ -25,7 +25,7 @@ void IotsaRFIDMod::handleAddCard(const String& uid) {
   auto it = normalCards.find(uid);
   if (it == normalCards.end()) {
     normalCards.insert(uid);
-    IotsaSerial.print("added card: ");
+    IotsaSerial.print("rfid: added card: ");
     IotsaSerial.println(uid);
   }
 }
@@ -34,7 +34,7 @@ void IotsaRFIDMod::handleRemoveCard(const String& uid) {
   auto it = normalCards.find(uid);
   if (it != normalCards.end()) {
     normalCards.erase(it);
-    IotsaSerial.print("Removed card: ");
+    IotsaSerial.print("rfid: Removed card: ");
     IotsaSerial.println(uid);
   }
 }
@@ -50,10 +50,10 @@ void IotsaRFIDMod::setup() {
   // SPI bus reads back, i.e. no chip actually answering (unplugged, unpowered, miswired).
   chipPresent = (chipVersion != 0x00 && chipVersion != 0xFF);
   if (chipPresent) {
-    IotsaSerial.print("RFID: MFRC522 VersionReg=0x");
+    IotsaSerial.print("rfid: MFRC522 VersionReg=0x");
     IotsaSerial.println(chipVersion, HEX);
   } else {
-    IotsaSerial.print("RFID: MFRC522 not detected (VersionReg=0x");
+    IotsaSerial.print("rfid: MFRC522 not detected (VersionReg=0x");
     IotsaSerial.print(chipVersion, HEX);
     IotsaSerial.println("), check reader wiring/power");
   }
@@ -128,7 +128,7 @@ bool IotsaRFIDMod::getHandler(const char *path, JsonObject& reply) {
     reply["lastCardPresented"] = (millis()-lastCardReadTime)/1000;
     reply["lastCardType"] = lastCardType;
   }
-  JsonArray rCards = reply["cards"].as<JsonArray>();
+  JsonArray rCards = reply["cards"].to<JsonArray>();
   for (auto value : normalCards) {
     rCards.add(value);
   }
@@ -202,7 +202,7 @@ void IotsaRFIDMod::loop() {
   //IotsaSerial.println("rfid in");
   if (curMode != card_idle && millis() > curModeEndTime) {
     // No card present for 2 seconds: revert to idle
-    IotsaSerial.println("mode timeout.");
+    IotsaSerial.println("rfid: mode timeout.");
     curModeEndTime = 0;
     curMode = card_idle;
     if (modeChanged) modeChanged(curMode);
@@ -221,13 +221,13 @@ void IotsaRFIDMod::loop() {
   if (!lastAttemptOk) {
     lastAttemptErrorReg = mfrc522.PCD_ReadRegister(MFRC522::ErrorReg);
     lastAttemptCollReg = mfrc522.PCD_ReadRegister(MFRC522::CollReg);
-    IotsaSerial.print("RFID: card present but read failed: ");
+    IotsaSerial.print("rfid: card present but read failed: ");
     IotsaSerial.println(MFRC522::GetStatusCodeName(selectStatus));
     return;
   }
   String newCard = strUid(mfrc522.uid);
   lastCardType = String(MFRC522::PICC_GetTypeName(MFRC522::PICC_GetType(mfrc522.uid.sak)));
-  IotsaSerial.print("RFID: card read ok, uid=");
+  IotsaSerial.print("rfid: card read ok, uid=");
   IotsaSerial.print(newCard);
   IotsaSerial.print(" type=");
   IotsaSerial.println(lastCardType);
@@ -260,7 +260,7 @@ void IotsaRFIDMod::handleCard(String& newCard) {
   else if (newCard == removeCard) newMode = card_remove;
   else if (lastCardKnown) newMode = card_ok;
   if (newMode != curMode) {
-    IotsaSerial.print("mode: ");
+    IotsaSerial.print("rfid: mode: ");
     IotsaSerial.println(int(newMode));
     curMode = newMode;
     curModeEndTime = millis() + 2000;
@@ -288,7 +288,7 @@ void IotsaRFIDMod::configLoad() {
     normalCards.insert(newCard);
     idx++;
   }
-  IotsaSerial.print("Cards loaded: "); IotsaSerial.println(idx-1);
+  IotsaSerial.print("rfid: Cards loaded: "); IotsaSerial.println(idx-1);
 }
 
 void IotsaRFIDMod::configSave() {
@@ -300,6 +300,6 @@ void IotsaRFIDMod::configSave() {
     String name = "card"+String(idx);
     cf.put(name, *it);
   }
-  IotsaSerial.print("Cards saved: "); IotsaSerial.println(idx-1);
+  IotsaSerial.print("rfid: Cards saved: "); IotsaSerial.println(idx-1);
 }
 
