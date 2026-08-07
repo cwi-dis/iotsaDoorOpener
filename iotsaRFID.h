@@ -50,7 +50,9 @@ public:
     lastAttemptErrorReg(0),
     lastAttemptCollReg(0),
     resetCount(0),
-    lastResetTime(0)
+    lastResetTime(0),
+    resetAfterSolenoidMs(0),
+    pendingResetAtMillis(0)
   {}
   void setup() override;
   void serverSetup() override;
@@ -61,6 +63,12 @@ public:
   // manually over /api/rfid, or by another module (e.g. after the door solenoid
   // disengages) to recover from the reader going "deaf" (cwi-dis/iotsaDoorOpener#7).
   void resetChip();
+  // Requests a resetChip() call resetAfterSolenoidMs milliseconds from now (handled
+  // non-blockingly in loop(), same style as curModeEndTime below). No-op if
+  // resetAfterSolenoidMs is 0 (the default - opt-in via config). Callable from another
+  // module (e.g. IotsaDoorMod::solenoidDeactivated, wired up in the main .cpp) without
+  // that module needing to know anything about RFID/resetChip() itself.
+  void scheduleReset();
   callbackFunc cardPresented;
   callbackFunc unknownCardPresented;
   modeCallbackFunc modeChanged;
@@ -98,6 +106,10 @@ private:
   uint8_t lastAttemptCollReg;
   uint32_t resetCount;
   uint32_t lastResetTime;
+
+  // Config-gated auto-recovery after a solenoid activation (cwi-dis/iotsaDoorOpener#7).
+  uint32_t resetAfterSolenoidMs; // 0 = disabled, persisted config
+  uint32_t pendingResetAtMillis; // 0 = none pending
 };
 
 

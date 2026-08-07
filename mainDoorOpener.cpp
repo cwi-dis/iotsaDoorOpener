@@ -31,6 +31,10 @@ void openDoor(String& uid) {
   doorMod.openDoor();
 }
 
+void onSolenoidDeactivated() {
+  rfidMod.scheduleReset();
+}
+
 void showMode(cardMode mode) {
   if (mode == card_ok) {
     ledMod.set(0x00ff00, 2000, 0, 1);  // 2 seconds green
@@ -59,6 +63,7 @@ void setup(void){
 #endif
   rfidMod.cardPresented = openDoor;
   rfidMod.modeChanged = showMode;
+  doorMod.solenoidDeactivated = onSolenoidDeactivated;
   showMode(card_idle);
 }
 

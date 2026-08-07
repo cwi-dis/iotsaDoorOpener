@@ -60,6 +60,11 @@ void IotsaRFIDMod::setup() {
   configLoad();
 }
 
+void IotsaRFIDMod::scheduleReset() {
+  if (resetAfterSolenoidMs == 0) return;
+  pendingResetAtMillis = millis() + resetAfterSolenoidMs;
+}
+
 void IotsaRFIDMod::resetChip() {
   IotsaSerial.println("rfid: resetChip requested");
   mfrc522.PCD_Init();
@@ -132,6 +137,11 @@ IotsaRFIDMod::handler() {
 bool IotsaRFIDMod::getHandler(const char *path, JsonObject& reply) {
   reply["addCard"] = addCard;
   reply["removeCard"] = removeCard;
+  // 0 (default) disables auto-recovery: resetChip() only runs on an explicit resetChip
+  // PUT (cwi-dis/iotsaDoorOpener#7). Nonzero opts in to firing it automatically that many
+  // ms after the door solenoid deactivates (wired in the main .cpp via
+  // IotsaDoorMod::solenoidDeactivated -> scheduleReset()).
+  reply["resetAfterSolenoidMs"] = resetAfterSolenoidMs;
   reply["lastCard"] = lastCard;
   if (lastCard != "") {
     reply["lastCardPresented"] = (millis()-lastCardReadTime)/1000;
@@ -188,6 +198,9 @@ bool IotsaRFIDMod::putHandler(const char *path, const JsonVariant& request, Json
   if (getFromRequest<const char *>(reqObj, "removeCard", removeCard)) {
     any = true;
   }
+  if (getFromRequest<uint32_t>(reqObj, "resetAfterSolenoidMs", resetAfterSolenoidMs)) {
+    any = true;
+  }
   JsonArray newCards;
   if (getFromRequest<JsonArray>(reqObj, "cards", newCards)) {
     any = true;
@@ -222,6 +235,11 @@ String IotsaRFIDMod::info() {
 }
 
 void IotsaRFIDMod::loop() {
+  if (pendingResetAtMillis && millis() > pendingResetAtMillis) {
+    pendingResetAtMillis = 0;
+    resetChip();
+  }
+
   if (!chipPresent) return; // No point polling a chip that wasn't there at setup()
 
   static uint32_t lastPoll;
@@ -308,6 +326,7 @@ void IotsaRFIDMod::configLoad() {
   IotsaConfigFileLoad cf("/config/rfid.cfg");
   cf.get("addCard", addCard, "");
   cf.get("removeCard", removeCard, "");
+  cf.get("resetAfterSolenoidMs", resetAfterSolenoidMs, (uint32_t)0);
   int idx=1;
   // xxxjack should use object interface
   normalCards.clear();
@@ -326,6 +345,7 @@ void IotsaRFIDMod::configSave() {
   IotsaConfigFileSave cf("/config/rfid.cfg");
   cf.put("addCard", addCard);
   cf.put("removeCard", removeCard);
+  cf.put("resetAfterSolenoidMs", resetAfterSolenoidMs);
   int idx=1;
   for (auto it=normalCards.begin(); it != normalCards.end(); it++, idx++) {
     String name = "card"+String(idx);

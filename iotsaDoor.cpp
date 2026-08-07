@@ -49,6 +49,7 @@ void IotsaDoorMod::loop() {
     if (millis() > activateSolenoidUntil) {
       activateSolenoidUntil = 0;
       digitalWrite(PIN_SOLENOID, LOW);
+      if (solenoidDeactivated) solenoidDeactivated();
     } else {
       digitalWrite(PIN_SOLENOID, HIGH);
     }
