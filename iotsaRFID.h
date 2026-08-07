@@ -48,12 +48,19 @@ public:
     lastAttemptOk(false),
     lastAttemptStatus(MFRC522::STATUS_OK),
     lastAttemptErrorReg(0),
-    lastAttemptCollReg(0)
+    lastAttemptCollReg(0),
+    resetCount(0),
+    lastResetTime(0)
   {}
   void setup() override;
   void serverSetup() override;
   void loop() override;
   String info() override;
+  // Re-initializes the MFRC522 chip (soft reset + reconfigure + antenna back on),
+  // without touching the setup()-time chipPresent/chipVersion snapshot. Callable
+  // manually over /api/rfid, or by another module (e.g. after the door solenoid
+  // disengages) to recover from the reader going "deaf" (cwi-dis/iotsaDoorOpener#7).
+  void resetChip();
   callbackFunc cardPresented;
   callbackFunc unknownCardPresented;
   modeCallbackFunc modeChanged;
@@ -89,6 +96,8 @@ private:
   MFRC522::StatusCode lastAttemptStatus;
   uint8_t lastAttemptErrorReg;
   uint8_t lastAttemptCollReg;
+  uint32_t resetCount;
+  uint32_t lastResetTime;
 };
 
 

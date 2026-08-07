@@ -60,6 +60,15 @@ void IotsaRFIDMod::setup() {
   configLoad();
 }
 
+void IotsaRFIDMod::resetChip() {
+  IotsaSerial.println("rfid: resetChip requested");
+  mfrc522.PCD_Init();
+  resetCount++;
+  lastResetTime = millis();
+  IotsaSerial.print("rfid: resetChip done, VersionReg=0x");
+  IotsaSerial.println(mfrc522.PCD_ReadRegister(MFRC522::VersionReg), HEX);
+}
+
 void
 IotsaRFIDMod::handler() {
   // Handles the page that is specific to the RFID module.
@@ -135,12 +144,23 @@ bool IotsaRFIDMod::getHandler(const char *path, JsonObject& reply) {
 
   // General RFID telemetry, for remote debugging of read failures (cwi-dis/iotsaDoorOpener#4)
   JsonObject telemetry = reply["telemetry"].to<JsonObject>();
-  telemetry["chipVersion"] = chipVersion;
-  telemetry["chipPresent"] = chipPresent;
-  if (chipPresent) {
+  // Live register read, not the cached setup()-time value: a chip that was present at
+  // boot can still go unresponsive later, and we want telemetry to reflect that.
+  uint8_t liveChipVersion = mfrc522.PCD_ReadRegister(MFRC522::VersionReg);
+  bool liveChipPresent = (liveChipVersion != 0x00 && liveChipVersion != 0xFF);
+  telemetry["chipVersion"] = liveChipVersion;
+  telemetry["chipPresent"] = liveChipPresent;
+  telemetry["chipPresentAtBoot"] = chipPresent;
+  if (liveChipPresent) {
     // Only meaningful when a real chip is answering: on a disconnected/dead bus every
     // register reads back 0xFF, which masks to a plausible-looking but bogus 0x70.
     telemetry["antennaGain"] = mfrc522.PCD_GetAntennaGain();
+    // TxControlReg bits 0/1 (Tx1RFEn/Tx2RFEn) - whether the antenna drivers are actually
+    // enabled. Distinct from antennaGain above, which is RFCfgReg (receiver gain, not
+    // transmit driver enable). A reset (e.g. a glitch on the MFRC522's NRSTPD line) leaves
+    // these disabled until PCD_AntennaOn()/PCD_Init() re-enables them - directly tests the
+    // "reader alive at the register level but antenna off" hypothesis (cwi-dis/iotsaDoorOpener#7).
+    telemetry["antennaOn"] = (mfrc522.PCD_ReadRegister(MFRC522::TxControlReg) & 0x03) == 0x03;
   }
   if (everAttemptedRead) {
     telemetry["lastAttemptAgo"] = (millis()-lastAttemptTime)/1000;
@@ -150,6 +170,10 @@ bool IotsaRFIDMod::getHandler(const char *path, JsonObject& reply) {
       telemetry["lastAttemptErrorReg"] = lastAttemptErrorReg;
       telemetry["lastAttemptCollReg"] = lastAttemptCollReg;
     }
+  }
+  if (resetCount > 0) {
+    telemetry["resetCount"] = resetCount;
+    telemetry["lastResetAgo"] = (millis()-lastResetTime)/1000;
   }
   return true;
 }
@@ -173,6 +197,13 @@ bool IotsaRFIDMod::putHandler(const char *path, const JsonVariant& request, Json
     }
   }
   if (any) configSave();
+
+  // Momentary action, not persisted config (matches IotsaConfigMod's "reboot" field):
+  // re-initializes the MFRC522 without a full device reboot (cwi-dis/iotsaDoorOpener#7).
+  if (reqObj["resetChip"]) {
+    resetChip();
+    any = true;
+  }
 
   return any;
 }
