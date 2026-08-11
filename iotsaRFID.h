@@ -52,7 +52,9 @@ public:
     resetCount(0),
     lastResetTime(0),
     resetAfterSolenoidMs(0),
-    pendingResetAtMillis(0)
+    pendingResetAtMillis(0),
+    cwGsP(0xFFFFFFFF),
+    modGsP(0xFFFFFFFF)
   {}
   void setup() override;
   void serverSetup() override;
@@ -110,6 +112,17 @@ private:
   // Config-gated auto-recovery after a solenoid activation (cwi-dis/iotsaDoorOpener#7).
   uint32_t resetAfterSolenoidMs; // 0 = disabled, persisted config
   uint32_t pendingResetAtMillis; // 0 = none pending
+
+  // Experimental, throwaway (cwi-dis/iotsaDoorOpener#5 reopened): CWGsPReg sets the p-driver
+  // conductance (transmit field strength) during unmodulated periods, which PCD_Init() never
+  // touches. 0xFFFFFFFF (default) means "leave the chip's power-on-reset value alone"; any
+  // other value (register is 6 bits wide, so 0-63 is meaningful) is written in setup()/
+  // putHandler() and persisted via configLoad()/configSave().
+  uint32_t cwGsP;
+  // Same idea, but ModGsPReg - p-driver conductance during periods of modulation, i.e. while
+  // an actual command (like the REQA wake) is being sent, as opposed to cwGsP's "idle carrier"
+  // case above.
+  uint32_t modGsP;
 };
 
 

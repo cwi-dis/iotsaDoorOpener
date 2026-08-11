@@ -58,6 +58,15 @@ void IotsaRFIDMod::setup() {
     IotsaSerial.println("), check reader wiring/power");
   }
   configLoad();
+  // Experimental, throwaway (cwi-dis/iotsaDoorOpener#5 reopened): apply persisted CWGsPReg/
+  // ModGsPReg overrides, if set by a previous sweep step. Leave the chip's power-on-reset
+  // values alone otherwise.
+  if (chipPresent && cwGsP != 0xFFFFFFFF) {
+    mfrc522.PCD_WriteRegister(MFRC522::CWGsPReg, (uint8_t)cwGsP);
+  }
+  if (chipPresent && modGsP != 0xFFFFFFFF) {
+    mfrc522.PCD_WriteRegister(MFRC522::ModGsPReg, (uint8_t)modGsP);
+  }
 }
 
 void IotsaRFIDMod::scheduleReset() {
@@ -142,6 +151,9 @@ bool IotsaRFIDMod::getHandler(const char *path, JsonObject& reply) {
   // ms after the door solenoid deactivates (wired in the main .cpp via
   // IotsaDoorMod::solenoidDeactivated -> scheduleReset()).
   reply["resetAfterSolenoidMs"] = resetAfterSolenoidMs;
+  // Experimental, throwaway (cwi-dis/iotsaDoorOpener#5 reopened, transmit-conductance sweep).
+  reply["cwGsP"] = cwGsP;
+  reply["modGsP"] = modGsP;
   reply["lastCard"] = lastCard;
   if (lastCard != "") {
     reply["lastCardPresented"] = (millis()-lastCardReadTime)/1000;
@@ -171,6 +183,10 @@ bool IotsaRFIDMod::getHandler(const char *path, JsonObject& reply) {
     // these disabled until PCD_AntennaOn()/PCD_Init() re-enables them - directly tests the
     // "reader alive at the register level but antenna off" hypothesis (cwi-dis/iotsaDoorOpener#7).
     telemetry["antennaOn"] = (mfrc522.PCD_ReadRegister(MFRC522::TxControlReg) & 0x03) == 0x03;
+    // Live readback, not the (possibly-sentinel) config value above - shows the actual
+    // register content regardless of whether cwGsP/modGsP have ever been explicitly set.
+    telemetry["cwGsP"] = mfrc522.PCD_ReadRegister(MFRC522::CWGsPReg);
+    telemetry["modGsP"] = mfrc522.PCD_ReadRegister(MFRC522::ModGsPReg);
   }
   if (everAttemptedRead) {
     telemetry["lastAttemptAgo"] = (millis()-lastAttemptTime)/1000;
@@ -200,6 +216,15 @@ bool IotsaRFIDMod::putHandler(const char *path, const JsonVariant& request, Json
   }
   if (getFromRequest<uint32_t>(reqObj, "resetAfterSolenoidMs", resetAfterSolenoidMs)) {
     any = true;
+  }
+  // Experimental, throwaway (cwi-dis/iotsaDoorOpener#5 reopened, transmit-conductance sweep).
+  if (getFromRequest<uint32_t>(reqObj, "cwGsP", cwGsP)) {
+    any = true;
+    if (chipPresent) mfrc522.PCD_WriteRegister(MFRC522::CWGsPReg, (uint8_t)cwGsP);
+  }
+  if (getFromRequest<uint32_t>(reqObj, "modGsP", modGsP)) {
+    any = true;
+    if (chipPresent) mfrc522.PCD_WriteRegister(MFRC522::ModGsPReg, (uint8_t)modGsP);
   }
   JsonArray newCards;
   if (getFromRequest<JsonArray>(reqObj, "cards", newCards)) {
@@ -327,6 +352,8 @@ void IotsaRFIDMod::configLoad() {
   cf.get("addCard", addCard, "");
   cf.get("removeCard", removeCard, "");
   cf.get("resetAfterSolenoidMs", resetAfterSolenoidMs, (uint32_t)0);
+  cf.get("cwGsP", cwGsP, (uint32_t)0xFFFFFFFF);
+  cf.get("modGsP", modGsP, (uint32_t)0xFFFFFFFF);
   int idx=1;
   // xxxjack should use object interface
   normalCards.clear();
@@ -346,6 +373,8 @@ void IotsaRFIDMod::configSave() {
   cf.put("addCard", addCard);
   cf.put("removeCard", removeCard);
   cf.put("resetAfterSolenoidMs", resetAfterSolenoidMs);
+  cf.put("cwGsP", cwGsP);
+  cf.put("modGsP", modGsP);
   int idx=1;
   for (auto it=normalCards.begin(); it != normalCards.end(); it++, idx++) {
     String name = "card"+String(idx);
