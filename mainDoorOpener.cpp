@@ -58,9 +58,6 @@ void showMode(cardMode mode) {
 void setup(void){
   application.setup();
   application.serverSetup();
-#ifndef ESP32
-  ESP.wdtEnable(WDTO_120MS);
-#endif
   rfidMod.cardPresented = openDoor;
   rfidMod.modeChanged = showMode;
   doorMod.solenoidDeactivated = onSolenoidDeactivated;
