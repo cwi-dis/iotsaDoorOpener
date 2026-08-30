@@ -15,8 +15,8 @@ IotsaDoorMod::handler() {
   if (needsAuthentication()) {
     return;
   }
-  if (server->hasArg("open")) {
-    if (server->arg("open").toInt() > 0) {
+  if (app.server->hasArg("open")) {
+    if (app.server->arg("open").toInt() > 0) {
       activateSolenoidUntil = millis() + solenoidActivationDuration;
     } else {
       activateSolenoidUntil = 0;
@@ -24,12 +24,12 @@ IotsaDoorMod::handler() {
   }
   String message = "<html><head><title>Door Server</title></head><body><h1>Door Server</h1>";
   message += "<form method='get'>Sesame: <input name='open' value='1' type='hidden'><input type='submit' value='Open'></form></body></html>";
-  server->send(200, "text/html", message);
+  app.server->send(200, "text/html", message);
 }
 
-void IotsaDoorMod::serverSetup() {
+void IotsaDoorMod::lateSetup() {
   // Setup the web server hooks for this module.
-  server->on("/door", std::bind(&IotsaDoorMod::handler, this));
+  app.server->on("/door", std::bind(&IotsaDoorMod::handler, this));
 }
 
 String IotsaDoorMod::info() {

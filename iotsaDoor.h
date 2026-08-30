@@ -19,15 +19,15 @@ typedef void (*doorCallbackFunc)();
 //  (e.g. iotsaSmartMeter's IotsaP1Mod).
 //
 
-class IotsaDoorMod : public IotsaMod {
+class IotsaDoorMod : public IotsaBaseModule {
 public:
   IotsaDoorMod(IotsaApplication &_app, IotsaAuthenticationProvider *_auth=NULL)
-  : IotsaMod(_app, _auth),
+  : IotsaBaseModule(_app, _auth),
     activateSolenoidUntil(0),
     solenoidActivationDuration(2000)
   {}
   void setup() override;
-  void serverSetup() override;
+  void lateSetup() override;
   void loop() override;
   String info() override;
   void openDoor();

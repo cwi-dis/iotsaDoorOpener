@@ -75,29 +75,29 @@ void IotsaRFIDMod::resetChip() {
 }
 
 void
-IotsaRFIDMod::handler() {
+IotsaRFIDMod::webHandler() {
   // Handles the page that is specific to the RFID module.
   if (needsAuthentication()) return;
   bool anyChanged = false;
-  if (server->hasArg("addCard") && server->arg("addCard") != addCard) {
+  if (api.webService->server->hasArg("addCard") && api.webService->server->arg("addCard") != addCard) {
     anyChanged = true;
-    addCard = server->arg("addCard");
+    addCard = api.webService->server->arg("addCard");
     IotsaSerial.print("Set addCard: ");
     IotsaSerial.println(addCard);
   }
-  if (server->hasArg("removeCard") && server->arg("removeCard") != removeCard) {
+  if (api.webService->server->hasArg("removeCard") && api.webService->server->arg("removeCard") != removeCard) {
     anyChanged = true;
-    removeCard = server->arg("removeCard");
+    removeCard = api.webService->server->arg("removeCard");
     IotsaSerial.print("Set removeCard: ");
     IotsaSerial.println(removeCard);
   }
-  if (server->hasArg("normalAdd") && server->arg("normalAdd") != "") {
+  if (api.webService->server->hasArg("normalAdd") && api.webService->server->arg("normalAdd") != "") {
     anyChanged = true;
-    handleAddCard(server->arg("normalAdd"));
+    handleAddCard(api.webService->server->arg("normalAdd"));
   }
-  if (server->hasArg("normalRemove") && server->arg("normalRemove") != "") {
+  if (api.webService->server->hasArg("normalRemove") && api.webService->server->arg("normalRemove") != "") {
     anyChanged = true;
-    handleRemoveCard(server->arg("normalRemove"));
+    handleRemoveCard(api.webService->server->arg("normalRemove"));
   }
   if (anyChanged) configSave();
 
@@ -107,17 +107,17 @@ IotsaRFIDMod::handler() {
   // one card's worth of HTML at a time, so this is bounded regardless of how
   // many cards are known.
 #ifdef CONTENT_LENGTH_UNKNOWN
-  server->setContentLength(CONTENT_LENGTH_UNKNOWN);
+  api.webService->server->setContentLength(CONTENT_LENGTH_UNKNOWN);
 #endif
-  server->send(200, "text/html");
-  server->sendContent("<html><head><title>RFID Server</title></head><body><h1>RFID Server</h1>");
+  api.webService->server->send(200, "text/html");
+  api.webService->server->sendContent("<html><head><title>RFID Server</title></head><body><h1>RFID Server</h1>");
   if (lastCard != "") {
     String message = "<p>Last card was presented " + String((millis()-lastCardReadTime)/1000) + " seconds ago, Card ID " + lastCard;
     if (!lastCardKnown) message += " (unknown)";
     message += ".</p>";
-    server->sendContent(message);
+    api.webService->server->sendContent(message);
   } else {
-    server->sendContent("<p>No card presented since last power-on.</p>");
+    api.webService->server->sendContent("<p>No card presented since last power-on.</p>");
   }
 
   String form = "<h2>Adding Cards</h2><form method='get'>Master addition card ID: <input name='addCard' value='";
@@ -125,13 +125,13 @@ IotsaRFIDMod::handler() {
   form += "'><br>Master removal card ID: <input name='removeCard' value='";
   form += removeCard;
   form += "'><br>Manually add normal card: <input name='normalAdd'><br><input type='submit'></form>";
-  server->sendContent(form);
+  api.webService->server->sendContent(form);
 
-  server->sendContent("<h2>Known Cards</h2><ul>");
+  api.webService->server->sendContent("<h2>Known Cards</h2><ul>");
   for (auto it=normalCards.begin(); it != normalCards.end(); it++) {
-    server->sendContent("<li>" + *it + "(<a href='/rfid?normalRemove=" + *it + "'>remove</a>)</li>");
+    api.webService->server->sendContent("<li>" + *it + "(<a href='/rfid?normalRemove=" + *it + "'>remove</a>)</li>");
   }
-  server->sendContent("</ul></body></html>");
+  api.webService->server->sendContent("</ul></body></html>");
 }
 
 bool IotsaRFIDMod::getHandler(const char *path, JsonObject& reply) {
@@ -221,11 +221,10 @@ bool IotsaRFIDMod::putHandler(const char *path, const JsonVariant& request, Json
   return any;
 }
 
-void IotsaRFIDMod::serverSetup() {
-  // Setup the web server hooks for this module.
-  server->on("/rfid", std::bind(&IotsaRFIDMod::handler, this));
-  api.setup("/api/rfid", true, true);
+void IotsaRFIDMod::lateSetup() {
+  // The /rfid page is registered by api.setup() below (webPage defaults to true).
   name = "rfid";
+  api.setup("rfid", true, true);
 }
 
 String IotsaRFIDMod::info() {

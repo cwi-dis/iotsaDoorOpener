@@ -11,7 +11,6 @@
 #include "iotsaDoor.h"
 #include "iotsaUser.h"
 
-#define WITH_OTA    // Enable Over The Air updates from ArduinoIDE. Needs at least 1MB flash.
 #define NEO_PIN 15  // Pin where neopixel led is attached
 
 IotsaApplication application("Door Opening Server");
@@ -57,7 +56,7 @@ void showMode(cardMode mode) {
 // Standard setup() method, hands off most work to the application framework
 void setup(void){
   application.setup();
-  application.serverSetup();
+  application.lateSetup();
   rfidMod.cardPresented = openDoor;
   rfidMod.modeChanged = showMode;
   doorMod.solenoidDeactivated = onSolenoidDeactivated;

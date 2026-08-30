@@ -32,10 +32,10 @@ typedef enum { card_idle, card_ok, card_bad, card_add, card_remove} cardMode;
 typedef void (*callbackFunc)(String& uid);
 typedef void (*modeCallbackFunc)(cardMode mode);
 
-class IotsaRFIDMod : public IotsaApiMod {
+class IotsaRFIDMod : public IotsaModule {
 public:
   IotsaRFIDMod(IotsaApplication &_app, IotsaAuthenticationProvider *_auth=NULL)
-  : IotsaApiMod(_app, _auth),
+  : IotsaModule(_app, _auth),
     mfrc522(PIN_RFID_SDA, PIN_RFID_RESET),
     lastCardReadTime(0),
     lastCardKnown(false),
@@ -55,7 +55,7 @@ public:
     pendingResetAtMillis(0)
   {}
   void setup() override;
-  void serverSetup() override;
+  void lateSetup() override;
   void loop() override;
   String info() override;
   // Re-initializes the MFRC522 chip (soft reset + reconfigure + antenna back on),
@@ -75,10 +75,10 @@ public:
 protected:
   bool getHandler(const char *path, JsonObject& reply) override;
   bool putHandler(const char *path, const JsonVariant& request, JsonObject& reply) override;
+  void webHandler() override;
 private:
   void configSave() override;
   void configLoad() override;
-  void handler();
   void handleCard(String& uid);
   bool lookupCard(const String& uid);
   void handleAddCard(const String& uid);
