@@ -34,21 +34,32 @@ void onSolenoidDeactivated() {
   rfidMod.scheduleReset();
 }
 
+// LED feedback for RFID mode changes, via iotsaStatus's status-pulse channel
+// (cwi-dis/iotsa#176/#256) instead of ledMod.set(). IotsaRFIDMod calls
+// modeChanged() -- and so showMode() -- at every real mode transition,
+// including the return to card_idle (both the loop() timeout and an
+// immediate add/remove success), so card_idle's clearStatusPulse() always
+// lands exactly when the RFID module's own window really ends. The
+// durations passed for card_add/card_remove below are just a safety cap in
+// case that callback is ever skipped -- they don't need to match
+// IotsaRFIDMod's real 5-second window exactly.
+static const uint32_t kRfidPulseCapMs = 6000;
+
 void showMode(cardMode mode) {
   if (mode == card_ok) {
-    ledMod.set(0x00ff00, 2000, 0, 1);  // 2 seconds green
+    iotsaStatus.setStatusPulse(0x00ff00, 0, 0, 2000, "card ok");  // 2 seconds green
     IotsaSerial.println("showMode: card_ok");
   } else if (mode == card_bad) {
-    ledMod.set(0xff0000, 2000, 0, 1);  // 2 seconds red
+    iotsaStatus.setStatusPulse(0xff0000, 0, 0, 2000, "card bad");  // 2 seconds red
     IotsaSerial.println("showMode: card_bad");
   } else if (mode == card_add) {
-    ledMod.set(0x00ff00, 250, 250, 8);  // 2 seconds green flashing
+    iotsaStatus.setStatusPulse(0x00ff00, 250, 250, kRfidPulseCapMs, "present card to add");  // green flashing
     IotsaSerial.println("showMode: card_add");
   } else if (mode == card_remove) {
-    ledMod.set(0xff0000, 250, 250, 8);  // 2 seconds red flashing
+    iotsaStatus.setStatusPulse(0xff0000, 250, 250, kRfidPulseCapMs, "present card to remove");  // red flashing
     IotsaSerial.println("showMode: card_remove");
   } else {
-    ledMod.showStatus(); // Short flashes to show module status/mode
+    iotsaStatus.clearStatusPulse(); // Resume normal iotsa status display
     IotsaSerial.println("showMode: iotsa status");
   }
 }
