@@ -4,27 +4,19 @@
 //
 
 #include "iotsa.h"
-#include "iotsaWifi.h"
 #include "iotsaRFID.h"
-#include "iotsaOta.h"
-#include "iotsaLed.h"
 #include "iotsaDoor.h"
 #include "iotsaUser.h"
-
-#define NEO_PIN 15  // Pin where neopixel led is attached
 
 IotsaApplication application("Door Opening Server");
 IotsaUserMod myAuthenticator(application, "admin");
 
-IotsaWifiMod wifiMod(application, &myAuthenticator);
-IotsaOtaMod otaMod(application, &myAuthenticator);
-IotsaLedMod ledMod(application, NEO_PIN);
 
 // Instantiate the Door module, and install it in the framework
-IotsaDoorMod doorMod(application, &myAuthenticator);
+IotsaDoorMod doorMod(application);
 
 // Instantiate the RFID module, and install it in the framework
-IotsaRFIDMod rfidMod(application, &myAuthenticator);
+IotsaRFIDMod rfidMod(application);
 
 void openDoor(String& uid) {
   doorMod.openDoor();
@@ -66,6 +58,7 @@ void showMode(cardMode mode) {
 
 // Standard setup() method, hands off most work to the application framework
 void setup(void){
+  application.setAuth(&myAuthenticator);  // every module, the standard ones included, uses this
   application.setup();
   application.lateSetup();
   rfidMod.cardPresented = openDoor;

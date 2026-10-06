@@ -21,8 +21,8 @@ typedef void (*doorCallbackFunc)();
 
 class IotsaDoorMod : public IotsaBaseModule {
 public:
-  IotsaDoorMod(IotsaApplication &_app, IotsaAuthenticationProvider *_auth=NULL)
-  : IotsaBaseModule(_app, _auth),
+  IotsaDoorMod(IotsaApplication &_app)
+  : IotsaBaseModule(_app),
     activateSolenoidUntil(0),
     solenoidActivationDuration(2000)
   {}

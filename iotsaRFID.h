@@ -34,8 +34,8 @@ typedef void (*modeCallbackFunc)(cardMode mode);
 
 class IotsaRFIDMod : public IotsaModule {
 public:
-  IotsaRFIDMod(IotsaApplication &_app, IotsaAuthenticationProvider *_auth=NULL)
-  : IotsaModule(_app, _auth),
+  IotsaRFIDMod(IotsaApplication &_app)
+  : IotsaModule(_app),
     mfrc522(PIN_RFID_SDA, PIN_RFID_RESET),
     lastCardReadTime(0),
     lastCardKnown(false),
