@@ -74,7 +74,7 @@ public:
   modeCallbackFunc modeChanged;
 protected:
   bool getHandler(const char *path, JsonObject& reply) override;
-  bool putHandler(const char *path, const JsonVariant& request, JsonObject& reply) override;
+  bool putHandler(const char *path, const JsonVariant& request, JsonObject& reply, bool *changed = nullptr) override;
   void webHandler() override;
 private:
   void configSave() override;

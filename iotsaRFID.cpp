@@ -188,7 +188,7 @@ bool IotsaRFIDMod::getHandler(const char *path, JsonObject& reply) {
   return true;
 }
 
-bool IotsaRFIDMod::putHandler(const char *path, const JsonVariant& request, JsonObject& reply) {
+bool IotsaRFIDMod::putHandler(const char *path, const JsonVariant& request, JsonObject& reply, bool *changed) {
   if (!request.is<JsonObject>()) return false;
   JsonObject reqObj = request.as<JsonObject>();
   bool any = false;
@@ -218,7 +218,9 @@ bool IotsaRFIDMod::putHandler(const char *path, const JsonVariant& request, Json
     any = true;
   }
 
-  return any;
+  if ((any) && changed) *changed = true;
+
+  return true;
 }
 
 void IotsaRFIDMod::lateSetup() {
