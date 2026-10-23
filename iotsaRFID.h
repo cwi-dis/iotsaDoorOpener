@@ -4,7 +4,7 @@
 #include "iotsa.h"
 #include "iotsaApi.h"
 #include "MFRC522.h"
-#include <set>
+#include <vector>
 
 //
 //  RFID module. Reads RFID cards.
@@ -31,6 +31,42 @@ typedef enum { card_idle, card_ok, card_bad, card_add, card_remove} cardMode;
 
 typedef void (*callbackFunc)(String& uid);
 typedef void (*modeCallbackFunc)(cardMode mode);
+
+//
+// A card that opens the door: its UID, as the reader reports it (hex,
+// upper case). An object only so the web page can show the cards as a
+// collection, with Add and Remove.
+//
+class IotsaRFIDCard : public IotsaModObject {
+public:
+  IotsaRFIDCard() {}
+  IotsaRFIDCard(const String& _uid) : uid(_uid) {}
+  String uid;
+  // Not a setting of its own: the module saves all cards, as card1..cardN.
+  bool configLoad(IotsaConfigFileLoad& cf, const String& name) override { return false; }
+  void configSave(IotsaConfigFileSave& cf, const String& name) override {}
+#ifdef IOTSA_WITH_WEB
+  void formHandler_args(IotsaWebContext& ctx) override;
+  void formHandler_fields(IotsaWebContext& ctx) override;
+  void formHandler_row(IotsaWebContext& ctx) override;
+#endif
+};
+
+#ifdef IOTSA_WITH_WEB
+//
+// The known cards on the web page: a table with Remove per card and an Add
+// form, keyed by UID. A new card is refused when it is already known.
+//
+class IotsaRFIDCardList : public IotsaWebVector<IotsaRFIDCard> {
+public:
+  IotsaRFIDCardList(std::vector<IotsaRFIDCard>& cards)
+  : IotsaWebVector<IotsaRFIDCard>(cards, Add | Remove, Table, IotsaWebContext::Saved)
+  {}
+  String key(int i) override { return _v[i].uid; }
+protected:
+  bool accept(IotsaRFIDCard& card, IotsaWebContext& ctx) override;
+};
+#endif
 
 class IotsaRFIDMod : public IotsaModule {
 public:
@@ -73,9 +109,13 @@ public:
   callbackFunc unknownCardPresented;
   modeCallbackFunc modeChanged;
 protected:
-  bool getHandler(const char *path, JsonObject& reply) override;
-  bool putHandler(const char *path, const JsonVariant& request, JsonObject& reply, bool *changed = nullptr) override;
-  void webHandler() override;
+  void getHandler(IotsaApiContext& ctx) override;
+  void putHandler(IotsaApiContext& ctx) override;
+#ifdef IOTSA_WITH_WEB
+  String webTitle() override { return "RFID cards"; }
+  void formHandler_args(IotsaWebContext& ctx) override;
+  void formHandler_fields(IotsaWebContext& ctx) override;
+#endif
 private:
   void configSave() override;
   void configLoad() override;
@@ -91,7 +131,10 @@ private:
   String lastCardType;
   uint32_t lastCardReadTime;
   bool lastCardKnown;
-  std::set<String> normalCards;
+  std::vector<IotsaRFIDCard> cards;
+#ifdef IOTSA_WITH_WEB
+  IotsaRFIDCardList webCards{cards};
+#endif
   cardMode curMode;
   uint32_t curModeEndTime;
 

@@ -16,28 +16,63 @@ static String strUid(MFRC522::Uid& uid) {
 }
 
 bool IotsaRFIDMod::lookupCard(const String& uid) {
-  auto it = normalCards.find(uid);
-  bool ok = it != normalCards.end();
-  return ok;
+  for (auto& c : cards) {
+    if (c.uid == uid) return true;
+  }
+  return false;
 }
 
 void IotsaRFIDMod::handleAddCard(const String& uid) {
-  auto it = normalCards.find(uid);
-  if (it == normalCards.end()) {
-    normalCards.insert(uid);
-    IotsaSerial.print("rfid: added card: ");
-    IotsaSerial.println(uid);
-  }
+  if (lookupCard(uid)) return;
+  cards.push_back(IotsaRFIDCard(uid));
+  IotsaSerial.print("rfid: added card: ");
+  IotsaSerial.println(uid);
 }
 
 void IotsaRFIDMod::handleRemoveCard(const String& uid) {
-  auto it = normalCards.find(uid);
-  if (it != normalCards.end()) {
-    normalCards.erase(it);
-    IotsaSerial.print("rfid: Removed card: ");
-    IotsaSerial.println(uid);
+  for (auto it = cards.begin(); it != cards.end(); ++it) {
+    if (it->uid == uid) {
+      cards.erase(it);
+      IotsaSerial.print("rfid: Removed card: ");
+      IotsaSerial.println(uid);
+      return;
+    }
   }
 }
+
+#ifdef IOTSA_WITH_WEB
+//
+// A card on the web page: its UID in the table, and in the add form.
+//
+void IotsaRFIDCard::formHandler_args(IotsaWebContext& ctx) {
+  ctx.arg("uid", uid, IotsaWebContext::Saved);
+}
+
+void IotsaRFIDCard::formHandler_fields(IotsaWebContext& ctx) {
+  ctx.showField("Card ID", "uid", uid, IotsaWebContext::Saved, "hex, as shown for the last card");
+}
+
+void IotsaRFIDCard::formHandler_row(IotsaWebContext& ctx) {
+  ctx.showCell("Card ID", uid);
+}
+
+// The ID as the reader reports it: upper case, no spaces.
+bool IotsaRFIDCardList::accept(IotsaRFIDCard& card, IotsaWebContext& ctx) {
+  card.uid.trim();
+  card.uid.toUpperCase();
+  if (card.uid == "") {
+    ctx.error("A new card needs its ID.");
+    return false;
+  }
+  for (auto& c : _v) {
+    if (c.uid == card.uid) {
+      ctx.error("Card " + card.uid + " is already known.");
+      return false;
+    }
+  }
+  return true;
+}
+#endif // IOTSA_WITH_WEB
 
 //
 // Implementation of the RFID module
@@ -74,86 +109,69 @@ void IotsaRFIDMod::resetChip() {
   IotsaSerial.println(mfrc522.PCD_ReadRegister(MFRC522::VersionReg), HEX);
 }
 
-void
-IotsaRFIDMod::webHandler() {
-  // Handles the page that is specific to the RFID module.
-  if (needsAuthentication()) return;
-  bool anyChanged = false;
-  if (api.webService->server->hasArg("addCard") && api.webService->server->arg("addCard") != addCard) {
-    anyChanged = true;
-    addCard = api.webService->server->arg("addCard");
-    IotsaSerial.print("Set addCard: ");
-    IotsaSerial.println(addCard);
-  }
-  if (api.webService->server->hasArg("removeCard") && api.webService->server->arg("removeCard") != removeCard) {
-    anyChanged = true;
-    removeCard = api.webService->server->arg("removeCard");
-    IotsaSerial.print("Set removeCard: ");
-    IotsaSerial.println(removeCard);
-  }
-  if (api.webService->server->hasArg("normalAdd") && api.webService->server->arg("normalAdd") != "") {
-    anyChanged = true;
-    handleAddCard(api.webService->server->arg("normalAdd"));
-  }
-  if (api.webService->server->hasArg("normalRemove") && api.webService->server->arg("normalRemove") != "") {
-    anyChanged = true;
-    handleRemoveCard(api.webService->server->arg("normalRemove"));
-  }
-  if (anyChanged) configSave();
-
-  // Stream the response instead of building one big in-core String: with enough
-  // known cards (~30-40) that String overflowed available RAM and crashed the
-  // device (cwi-dis/iotsaDoorOpener#1). Each sendContent() call only ever holds
-  // one card's worth of HTML at a time, so this is bounded regardless of how
-  // many cards are known.
-#ifdef CONTENT_LENGTH_UNKNOWN
-  api.webService->server->setContentLength(CONTENT_LENGTH_UNKNOWN);
-#endif
-  api.webService->server->send(200, "text/html");
-  api.webService->server->sendContent("<html><head><title>RFID Server</title></head><body><h1>RFID Server</h1>");
-  if (lastCard != "") {
-    String message = "<p>Last card was presented " + String((millis()-lastCardReadTime)/1000) + " seconds ago, Card ID " + lastCard;
-    if (!lastCardKnown) message += " (unknown)";
-    message += ".</p>";
-    api.webService->server->sendContent(message);
-  } else {
-    api.webService->server->sendContent("<p>No card presented since last power-on.</p>");
-  }
-
-  String form = "<h2>Adding Cards</h2><form method='get'>Master addition card ID: <input name='addCard' value='";
-  form += addCard;
-  form += "'><br>Master removal card ID: <input name='removeCard' value='";
-  form += removeCard;
-  form += "'><br>Manually add normal card: <input name='normalAdd'><br><input type='submit'></form>";
-  api.webService->server->sendContent(form);
-
-  api.webService->server->sendContent("<h2>Known Cards</h2><ul>");
-  for (auto it=normalCards.begin(); it != normalCards.end(); it++) {
-    api.webService->server->sendContent("<li>" + *it + "(<a href='/rfid?normalRemove=" + *it + "'>remove</a>)</li>");
-  }
-  api.webService->server->sendContent("</ul></body></html>");
+#ifdef IOTSA_WITH_WEB
+void IotsaRFIDMod::formHandler_args(IotsaWebContext& ctx) {
+  ctx.arg("addCard", addCard, IotsaWebContext::Saved);
+  ctx.arg("removeCard", removeCard, IotsaWebContext::Saved);
+  ctx.arg("resetAfterSolenoidMs", resetAfterSolenoidMs, IotsaWebContext::Saved);
+  IotsaWebContext::Scope s(ctx, "cards");
+  webCards.formHandler_args(ctx);
 }
 
-bool IotsaRFIDMod::getHandler(const char *path, JsonObject& reply) {
-  reply["addCard"] = addCard;
-  reply["removeCard"] = removeCard;
+// The page is built in memory and then sent in pieces, so a long list of
+// cards is in memory once (cwi-dis/iotsaDoorOpener#1, cwi-dis/iotsa@2448219).
+void IotsaRFIDMod::formHandler_fields(IotsaWebContext& ctx) {
+  if (ctx.includesEveryday()) {
+    if (lastCard == "") {
+      ctx.showStatus("Last card", "lastCard", "none since power-on");
+    } else {
+      String last = lastCard + (lastCardKnown ? "" : " (unknown)");
+      last += ", " + String((millis()-lastCardReadTime)/1000) + " seconds ago";
+      ctx.showStatus("Last card", "lastCard", last);
+    }
+    return;
+  }
+  {
+    IotsaWebContext::Form form(ctx, "Save", "Master cards");
+    ctx.showField("Master addition card", "addCard", addCard, IotsaWebContext::Saved, "presenting it, then a new card, adds that card");
+    ctx.showField("Master removal card", "removeCard", removeCard, IotsaWebContext::Saved, "presenting it, then a known card, removes that card");
+    IotsaContext::RightsScope rights(ctx);
+    ctx.showsNeedRight(IOTSA_RIGHT_NONE);
+    ctx.showField("Reset reader after door", "resetAfterSolenoidMs", resetAfterSolenoidMs, IotsaWebContext::Saved, "ms after the solenoid switches off, 0: never");
+  }
+  ctx << "<h3>Known cards</h3>\n";
+  IotsaWebContext::Scope s(ctx, "cards");
+  webCards.formHandler_fields(ctx);
+}
+#endif // IOTSA_WITH_WEB
+
+// Everything needs the right "rfid" (see lateSetup()), except the reader's
+// health: resetAfterSolenoidMs and the telemetry, for debugging a reader at
+// a distance (cwi-dis/iotsaDoorOpener#4, #7).
+void IotsaRFIDMod::getHandler(IotsaApiContext& ctx) {
+  ctx.show("addCard", addCard);
+  ctx.show("removeCard", removeCard);
+  ctx.show("lastCard", lastCard);
+  if (lastCard != "") {
+    ctx.show("lastCardPresented", (millis()-lastCardReadTime)/1000);
+    ctx.show("lastCardType", lastCardType);
+  }
+  JsonDocument cardList;
+  JsonArray rCards = cardList.to<JsonArray>();
+  for (auto& c : cards) {
+    rCards.add(c.uid);
+  }
+  ctx.show("cards", rCards);
+
+  ctx.showsNeedRight(IOTSA_RIGHT_NONE);
   // 0 (default) disables auto-recovery: resetChip() only runs on an explicit resetChip
   // PUT (cwi-dis/iotsaDoorOpener#7). Nonzero opts in to firing it automatically that many
   // ms after the door solenoid deactivates (wired in the main .cpp via
   // IotsaDoorMod::solenoidDeactivated -> scheduleReset()).
-  reply["resetAfterSolenoidMs"] = resetAfterSolenoidMs;
-  reply["lastCard"] = lastCard;
-  if (lastCard != "") {
-    reply["lastCardPresented"] = (millis()-lastCardReadTime)/1000;
-    reply["lastCardType"] = lastCardType;
-  }
-  JsonArray rCards = reply["cards"].to<JsonArray>();
-  for (auto value : normalCards) {
-    rCards.add(value);
-  }
+  ctx.show("resetAfterSolenoidMs", resetAfterSolenoidMs);
 
   // General RFID telemetry, for remote debugging of read failures (cwi-dis/iotsaDoorOpener#4)
-  JsonObject telemetry = reply["telemetry"].to<JsonObject>();
+  JsonObject telemetry = ctx.reply()["telemetry"].to<JsonObject>();
   // Live register read, not the cached setup()-time value: a chip that was present at
   // boot can still go unresponsive later, and we want telemetry to reflect that.
   uint8_t liveChipVersion = mfrc522.PCD_ReadRegister(MFRC522::VersionReg);
@@ -185,48 +203,36 @@ bool IotsaRFIDMod::getHandler(const char *path, JsonObject& reply) {
     telemetry["resetCount"] = resetCount;
     telemetry["lastResetAgo"] = (millis()-lastResetTime)/1000;
   }
-  return true;
 }
 
-bool IotsaRFIDMod::putHandler(const char *path, const JsonVariant& request, JsonObject& reply, bool *changed) {
-  if (!request.is<JsonObject>()) return false;
-  JsonObject reqObj = request.as<JsonObject>();
-  bool any = false;
-  if (getFromRequest<const char *>(reqObj, "addCard", addCard)) {
-    any = true;
-  }
-  if (getFromRequest<const char *>(reqObj, "removeCard", removeCard)) {
-    any = true;
-  }
-  if (getFromRequest<uint32_t>(reqObj, "resetAfterSolenoidMs", resetAfterSolenoidMs)) {
-    any = true;
-  }
-  JsonArray newCards;
-  if (getFromRequest<JsonArray>(reqObj, "cards", newCards)) {
-    any = true;
-    normalCards.clear();
-    for (auto value: newCards) {
-      normalCards.insert(value.as<String>());
+// cards replaces the whole list (a backup restored); resetChip is an action.
+void IotsaRFIDMod::putHandler(IotsaApiContext& ctx) {
+  ctx.arg("addCard", addCard, IotsaApiContext::Saved);
+  ctx.arg("removeCard", removeCard, IotsaApiContext::Saved);
+  ctx.arg("resetAfterSolenoidMs", resetAfterSolenoidMs, IotsaApiContext::Saved);
+  bool newCards = ctx.argAction("cards", IotsaApiContext::Saved);
+  bool reset = false;
+  ctx.arg("resetChip", reset, IotsaApiContext::Transient);
+  if (newCards && !ctx.request()["cards"].is<JsonArray>()) ctx.error(400, "cards: expected a list");
+  if (ctx.failed()) return;
+  if (newCards) {
+    cards.clear();
+    for (auto value : ctx.request()["cards"].as<JsonArray>()) {
+      handleAddCard(value.as<String>());
     }
   }
-  if (any) configSave();
-
-  // Momentary action, not persisted config (matches IotsaConfigMod's "reboot" field):
-  // re-initializes the MFRC522 without a full device reboot (cwi-dis/iotsaDoorOpener#7).
-  if (reqObj["resetChip"]) {
-    resetChip();
-    any = true;
-  }
-
-  if ((any) && changed) *changed = true;
-
-  return true;
+  // Re-initializes the MFRC522 without a full device reboot (cwi-dis/iotsaDoorOpener#7).
+  if (reset) resetChip();
 }
 
 void IotsaRFIDMod::lateSetup() {
   // The /rfid page is registered by api.setup() below (webPage defaults to true).
   name = "rfid";
   api.setup("rfid", true, true);
+  // Card UIDs are as good as keys: reading and changing anything here needs
+  // the right "rfid", unless a handler says otherwise (the reader's health).
+  readsNeedRight("rfid");
+  changesNeedRight("rfid");
 }
 
 String IotsaRFIDMod::info() {
@@ -329,14 +335,13 @@ void IotsaRFIDMod::configLoad() {
   cf.get("removeCard", removeCard, "");
   cf.get("resetAfterSolenoidMs", resetAfterSolenoidMs, (uint32_t)0);
   int idx=1;
-  // xxxjack should use object interface
-  normalCards.clear();
+  cards.clear();
   while(1) {
     String newCard;
     String name = "card"+String(idx);
     cf.get(name, newCard, "");
     if (newCard == "") break;
-    normalCards.insert(newCard);
+    cards.push_back(IotsaRFIDCard(newCard));
     idx++;
   }
   IotsaSerial.print("rfid: Cards loaded: "); IotsaSerial.println(idx-1);
@@ -348,9 +353,9 @@ void IotsaRFIDMod::configSave() {
   cf.put("removeCard", removeCard);
   cf.put("resetAfterSolenoidMs", resetAfterSolenoidMs);
   int idx=1;
-  for (auto it=normalCards.begin(); it != normalCards.end(); it++, idx++) {
+  for (auto it=cards.begin(); it != cards.end(); it++, idx++) {
     String name = "card"+String(idx);
-    cf.put(name, *it);
+    cf.put(name, it->uid);
   }
   IotsaSerial.print("rfid: Cards saved: "); IotsaSerial.println(idx-1);
 }

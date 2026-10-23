@@ -8,28 +8,10 @@ void IotsaDoorMod::setup() {
   activateSolenoidUntil = 0;
 }
 
-void
-IotsaDoorMod::handler() {
-  // Handles the page that is specific to the Door module, activates the solenoid
-  // for a second.
-  if (needsAuthentication()) {
-    return;
-  }
-  if (app.server->hasArg("open")) {
-    if (app.server->arg("open").toInt() > 0) {
-      activateSolenoidUntil = millis() + solenoidActivationDuration;
-    } else {
-      activateSolenoidUntil = 0;
-    }
-  }
-  String message = "<html><head><title>Door Server</title></head><body><h1>Door Server</h1>";
-  message += "<form method='get'>Sesame: <input name='open' value='1' type='hidden'><input type='submit' value='Open'></form></body></html>";
-  app.server->send(200, "text/html", message);
-}
-
 void IotsaDoorMod::lateSetup() {
-  // Setup the web server hooks for this module.
-  app.server->on("/door", std::bind(&IotsaDoorMod::handler, this));
+  api.setup("door", true, true);
+  name = "door";
+  changesNeedRight("door");
 }
 
 String IotsaDoorMod::info() {
@@ -37,6 +19,31 @@ String IotsaDoorMod::info() {
   String rv = "<p>See <a href=\"/door\">/door</a> for opening the door.</p>";
   return rv;
 }
+
+void IotsaDoorMod::getHandler(IotsaApiContext& ctx) {
+  ctx.show("open", isOpen());
+}
+
+void IotsaDoorMod::putHandler(IotsaApiContext& ctx) {
+  bool open = false;
+  ctx.arg("open", open, IotsaApiContext::Transient);
+  if (ctx.failed()) return;
+  if (open) openDoor();
+}
+
+#ifdef IOTSA_WITH_WEB
+void IotsaDoorMod::formHandler_args(IotsaWebContext& ctx) {
+  if (!ctx.argAction("open", IotsaWebContext::Transient)) return;
+  openDoor();
+  ctx.feedback("Opened.");
+}
+
+void IotsaDoorMod::formHandler_fields(IotsaWebContext& ctx) {
+  if (!ctx.includesEveryday()) return;
+  ctx.showStatus("Door", "open", isOpen() ? "open" : "closed");
+  ctx.showButton("open", "Open", IotsaWebContext::Transient);
+}
+#endif // IOTSA_WITH_WEB
 
 void IotsaDoorMod::openDoor() {
   activateSolenoidUntil = millis() + solenoidActivationDuration;

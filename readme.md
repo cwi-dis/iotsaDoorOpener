@@ -59,6 +59,10 @@ You can add and remove cards that will open the door here too.
 
 You can also set a "_Master Addition_" and "_Master Removal_" card here. These card will _not_ open the door, but in stead allow you to add other cards (or remove them) without going through the web interface. Present _Master Addition_ and then a new card within a couple of seconds and that new card will be added to the list of known cards.
 
+Add a user on <http://door.local/users> (in configuration mode) to protect the door: opening it then needs the right `door`, and everything about the cards (seeing them too, since a card's ID is as good as a key) needs the right `rfid`. A user with the rights `*` has both. Until the first user is added, everyone on the network can do everything.
+
+The same is available over REST: `PUT /api/door {"open": true}` opens the door, `/api/rfid` has the cards (`cards`, a list of IDs), the master cards, and the reader's health (`telemetry`, readable without a login).
+
 ### Normal operation
 
 The LED will flash white once every 5 seconds or so to show that the door opener is working. 
