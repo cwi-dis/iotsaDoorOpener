@@ -34,10 +34,10 @@ typedef void (*modeCallbackFunc)(cardMode mode);
 
 //
 // A card that opens the door: its UID, as the reader reports it (hex,
-// upper case). An object only so the web page can show the cards as a
-// collection, with Add and Remove.
+// upper case). An object so the cards are a collection, with Add and
+// Remove, on the page and in the API: {"uid": "..."} (cwi-dis/iotsa#309).
 //
-class IotsaRFIDCard : public IotsaModObject {
+class IotsaRFIDCard : public IotsaApiModObject {
 public:
   IotsaRFIDCard() {}
   IotsaRFIDCard(const String& _uid) : uid(_uid) {}
@@ -45,6 +45,8 @@ public:
   // Not a setting of its own: the module saves all cards, as card1..cardN.
   bool configLoad(IotsaConfigFileLoad& cf, const String& name) override { return false; }
   void configSave(IotsaConfigFileSave& cf, const String& name) override {}
+  void getHandler(IotsaApiContext& ctx) override;
+  void putHandler(IotsaApiContext& ctx) override;
 #ifdef IOTSA_WITH_WEB
   void formHandler_args(IotsaWebContext& ctx) override;
   void formHandler_fields(IotsaWebContext& ctx) override;
@@ -52,21 +54,21 @@ public:
 #endif
 };
 
-#ifdef IOTSA_WITH_WEB
 //
-// The known cards on the web page: a table with Remove per card and an Add
-// form, keyed by UID. A new card is refused when it is already known.
+// The known cards, "cards": a table with Remove per card and an Add form on
+// the page, the collection's shape in the API, keyed by UID. A new card is
+// refused when it is already known.
 //
-class IotsaRFIDCardList : public IotsaWebVector<IotsaRFIDCard> {
+class IotsaRFIDCardList : public IotsaVector<IotsaRFIDCard> {
 public:
   IotsaRFIDCardList(std::vector<IotsaRFIDCard>& cards)
-  : IotsaWebVector<IotsaRFIDCard>(cards, Add | Remove, Table, IotsaWebContext::Saved)
+  : IotsaVector<IotsaRFIDCard>("cards", cards, Add | Remove, Table, IotsaContext::Saved)
   {}
   String key(int i) override { return _v[i].uid; }
+  const char *keyField() override { return "uid"; }
 protected:
-  bool accept(IotsaRFIDCard& card, IotsaWebContext& ctx) override;
+  bool accept(IotsaRFIDCard& card, IotsaContext& ctx) override;
 };
-#endif
 
 class IotsaRFIDMod : public IotsaModule {
 public:
@@ -132,9 +134,7 @@ private:
   uint32_t lastCardReadTime;
   bool lastCardKnown;
   std::vector<IotsaRFIDCard> cards;
-#ifdef IOTSA_WITH_WEB
-  IotsaRFIDCardList webCards{cards};
-#endif
+  IotsaRFIDCardList cardList{cards};
   cardMode curMode;
   uint32_t curModeEndTime;
 

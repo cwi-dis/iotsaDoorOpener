@@ -61,7 +61,9 @@ You can also set a "_Master Addition_" and "_Master Removal_" card here. These c
 
 Add a user on <http://door.local/users> (in configuration mode) to protect the door: opening it then needs the right `door`, and everything about the cards (seeing them too, since a card's ID is as good as a key) needs the right `rfid`. A user with the rights `*` has both. Until the first user is added, everyone on the network can do everything.
 
-The same is available over REST: `PUT /api/door {"open": true}` opens the door, `/api/rfid` has the cards (`cards`, a list of IDs), the master cards, and the reader's health (`telemetry`, readable without a login).
+The same is available over REST: `PUT /api/door {"open": true}` opens the door, `/api/rfid` has the cards, the master cards, and the reader's health (`telemetry`, readable without a login). The cards are a collection with iotsa's collection shape (cwi-dis/iotsa#309): `"cards": [{"uid": "04A1B2C3"}, ...]`. A PUT of that array replaces all cards (a backup restored); `{"cards": {"04A1B2C3": {}}}` adds one card, `{"cards": {"04A1B2C3": null}}` removes it.
+
+**Restoring an older backup:** before iotsa 3.0 the cards were a list of strings, `"cards": ["04A1B2C3", ...]`. Convert each string to `{"uid": "..."}` before restoring such a backup onto this firmware.
 
 ### Normal operation
 

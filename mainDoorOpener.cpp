@@ -40,19 +40,19 @@ static const uint32_t kRfidPulseCapMs = 6000;
 void showMode(cardMode mode) {
   if (mode == card_ok) {
     iotsaStatus.setStatusPulse(0x00ff00, 0, 0, 2000, "card ok");  // 2 seconds green
-    IotsaSerial.println("showMode: card_ok");
+    IOTSA_LOG_DEBUG("doorOpener", "showMode: card_ok");
   } else if (mode == card_bad) {
     iotsaStatus.setStatusPulse(0xff0000, 0, 0, 2000, "card bad");  // 2 seconds red
-    IotsaSerial.println("showMode: card_bad");
+    IOTSA_LOG_DEBUG("doorOpener", "showMode: card_bad");
   } else if (mode == card_add) {
     iotsaStatus.setStatusPulse(0x00ff00, 250, 250, kRfidPulseCapMs, "present card to add");  // green flashing
-    IotsaSerial.println("showMode: card_add");
+    IOTSA_LOG_DEBUG("doorOpener", "showMode: card_add");
   } else if (mode == card_remove) {
     iotsaStatus.setStatusPulse(0xff0000, 250, 250, kRfidPulseCapMs, "present card to remove");  // red flashing
-    IotsaSerial.println("showMode: card_remove");
+    IOTSA_LOG_DEBUG("doorOpener", "showMode: card_remove");
   } else {
     iotsaStatus.clearStatusPulse(); // Resume normal iotsa status display
-    IotsaSerial.println("showMode: iotsa status");
+    IOTSA_LOG_DEBUG("doorOpener", "showMode: iotsa status");
   }
 }
 
